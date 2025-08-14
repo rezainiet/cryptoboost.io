@@ -1,28 +1,73 @@
 "use client"
 
 import { useState } from "react"
-import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth"
 import { Link, useNavigate } from "react-router-dom"
+import { useAuthState, useSignInWithEmailAndPassword } from "react-firebase-hooks/auth"
 import { auth } from "../../firebase"
+import apiService from "../services/apiService"
 
 export default function LoginPage() {
     const navigate = useNavigate()
+    const [user, loading] = useAuthState(auth)
+    const [signInWithEmailAndPassword, firebaseUser, firebaseLoading, firebaseError] = useSignInWithEmailAndPassword(auth)
+
     const [formData, setFormData] = useState({
         email: "",
         password: "",
         rememberMe: false,
     })
+    const [errors, setErrors] = useState({})
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
-    const [signInWithEmailAndPassword, user, loading, error] = useSignInWithEmailAndPassword(auth)
+    if (user && !loading) {
+        navigate("/dashboard")
+        return null
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        setIsSubmitting(true)
+        setErrors({})
 
-        const result = await signInWithEmailAndPassword(formData.email, formData.password)
+        try {
+            const firebaseResult = await signInWithEmailAndPassword(formData.email, formData.password)
 
-        if (result) {
-            navigate("/dashboard")
-            setFormData({ email: "", password: "", rememberMe: false })
+            if (!firebaseResult?.user) {
+                throw new Error("Erreur de connexion Firebase")
+            }
+
+            const loginResult = await apiService.loginUser(formData.email, {
+                password: formData.password,
+                rememberMe: formData.rememberMe,
+                userAgent: navigator.userAgent,
+                ipAddress: "client-side",
+            })
+
+            if (loginResult.success) {
+                console.log("User logged in successfully:", formData.email)
+
+                // Clear form
+                setFormData({ email: "", password: "", rememberMe: false })
+
+                // Navigate to dashboard
+                navigate("/dashboard")
+            }
+        } catch (error) {
+            console.error("Login error:", error)
+
+            if (
+                error.message.includes("user-not-found") ||
+                error.message.includes("wrong-password") ||
+                error.message.includes("invalid-credential")
+            ) {
+                setErrors({ email: "Email ou mot de passe incorrect." })
+            } else if (error.message.includes("too-many-requests")) {
+                setErrors({ general: "Trop de tentatives. Veuillez réessayer plus tard." })
+            } else {
+                setErrors({ general: "Erreur de connexion. Veuillez réessayer." })
+            }
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -32,6 +77,11 @@ export default function LoginPage() {
             ...prev,
             [name]: type === "checkbox" ? checked : value,
         }))
+
+        // Clear errors when user starts typing
+        if (errors[name]) {
+            setErrors((prev) => ({ ...prev, [name]: "" }))
+        }
     }
 
     return (
@@ -64,17 +114,9 @@ export default function LoginPage() {
                         <p className="text-gray-600 text-sm sm:text-base">Accédez à votre compte Cryptoboost.io</p>
                     </div>
 
-                    {error && (
+                    {(errors.general || errors.email) && (
                         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-600 text-sm">
-                                {error.code === "auth/user-not-found"
-                                    ? "Aucun compte trouvé avec cette adresse email."
-                                    : error.code === "auth/wrong-password"
-                                        ? "Mot de passe incorrect."
-                                        : error.code === "auth/invalid-email"
-                                            ? "Adresse email invalide."
-                                            : "Erreur de connexion. Veuillez réessayer."}
-                            </p>
+                            <p className="text-red-600 text-sm">{errors.general || errors.email}</p>
                         </div>
                     )}
 
@@ -133,10 +175,10 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isSubmitting || firebaseLoading}
                             className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 text-white py-3 sm:py-4 px-4 rounded-lg font-medium hover:from-teal-700 hover:to-emerald-700 focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-base"
                         >
-                            {loading ? (
+                            {isSubmitting || firebaseLoading ? (
                                 <>
                                     <svg
                                         className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -183,7 +225,7 @@ export default function LoginPage() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 0 00-8 0v4h8z"
                             />
                         </svg>
                         Connexion sécurisée SSL

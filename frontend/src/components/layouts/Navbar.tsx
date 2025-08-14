@@ -7,7 +7,9 @@ import AuthManager from "../Auth/AuthManager"
 
 export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [user, loading] = useAuthState(auth)
+    const [user, loading] = useAuthState(auth);
+
+    console.log(user)
 
     return (
         <nav className="relative z-50 px-4 sm:px-6 py-4">

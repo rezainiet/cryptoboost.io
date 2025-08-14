@@ -1,35 +1,79 @@
 "use client"
 
 import { useState } from "react"
-import { useCreateUserWithEmailAndPassword, useUpdateProfile } from "react-firebase-hooks/auth"
 import { Link, useNavigate } from "react-router-dom"
+import { useAuthState, useCreateUserWithEmailAndPassword } from "react-firebase-hooks/auth"
 import { auth } from "../../firebase"
+import apiService from "../services/apiService"
 
 export default function RegisterPage() {
     const navigate = useNavigate()
+    const [user, loading] = useAuthState(auth)
+    const [createUserWithEmailAndPassword, firebaseUser, firebaseLoading, firebaseError] =
+        useCreateUserWithEmailAndPassword(auth)
+
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
         email: "",
+        phone: "",
         password: "",
         confirmPassword: "",
         acceptTerms: false,
         acceptMarketing: false,
     })
     const [errors, setErrors] = useState({})
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] })
 
-    const [createUserWithEmailAndPassword, user, loading, error] = useCreateUserWithEmailAndPassword(auth)
-    const [updateProfile, updating, updateError] = useUpdateProfile(auth)
+    if (user && !loading) {
+        navigate("/dashboard")
+        return null
+    }
+
+    const checkPasswordStrength = (password) => {
+        const feedback = []
+        let score = 0
+
+        if (password.length >= 8) score += 1
+        else feedback.push("Au moins 8 caractères")
+
+        if (/[A-Z]/.test(password)) score += 1
+        else feedback.push("Une lettre majuscule")
+
+        if (/[a-z]/.test(password)) score += 1
+        else feedback.push("Une lettre minuscule")
+
+        if (/\d/.test(password)) score += 1
+        else feedback.push("Un chiffre")
+
+        if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 1
+        else feedback.push("Un caractère spécial")
+
+        return { score, feedback }
+    }
 
     const validateForm = () => {
         const newErrors = {}
+
+        if (!formData.firstName.trim()) {
+            newErrors.firstName = "Le prénom est requis"
+        }
+
+        if (!formData.lastName.trim()) {
+            newErrors.lastName = "Le nom est requis"
+        }
+
+        if (!formData.phone.trim()) {
+            newErrors.phone = "Le numéro de téléphone est requis"
+        }
 
         if (formData.password !== formData.confirmPassword) {
             newErrors.confirmPassword = "Les mots de passe ne correspondent pas"
         }
 
-        if (formData.password.length < 8) {
-            newErrors.password = "Le mot de passe doit contenir au moins 8 caractères"
+        if (passwordStrength.score < 3) {
+            newErrors.password = "Le mot de passe doit être plus fort"
         }
 
         if (!formData.acceptTerms) {
@@ -45,23 +89,67 @@ export default function RegisterPage() {
 
         if (!validateForm()) return
 
-        const result = await createUserWithEmailAndPassword(formData.email, formData.password)
+        setIsSubmitting(true)
 
-        if (result) {
-            await updateProfile({
-                displayName: `${formData.firstName} ${formData.lastName}`,
-            })
+        try {
+            const firebaseResult = await createUserWithEmailAndPassword(formData.email, formData.password)
 
-            navigate("/dashboard")
-            setFormData({
-                firstName: "",
-                lastName: "",
-                email: "",
-                password: "",
-                confirmPassword: "",
-                acceptTerms: false,
-                acceptMarketing: false,
-            })
+            if (!firebaseResult?.user) {
+                throw new Error("Erreur lors de la création du compte Firebase")
+            }
+
+            try {
+                const userData = {
+                    name: `${formData.firstName} ${formData.lastName}`,
+                    email: formData.email,
+                    phone: formData.phone,
+                    password: formData.password,
+                }
+
+                const result = await apiService.registerUser(userData)
+                await apiService.logUserActivity(formData.email, "registration", {
+                    source: "web",
+                    userAgent: navigator.userAgent,
+                })
+
+                if (result.success) {
+                    console.log("User registered successfully:", result)
+
+                    // Clear form
+                    setFormData({
+                        firstName: "",
+                        lastName: "",
+                        email: "",
+                        phone: "",
+                        password: "",
+                        confirmPassword: "",
+                        acceptTerms: false,
+                        acceptMarketing: false,
+                    })
+
+                    navigate("/dashboard")
+                }
+            } catch (backendError) {
+                console.error("Backend registration failed, cleaning up Firebase user:", backendError)
+
+                if (firebaseResult?.user) {
+                    await firebaseResult.user.delete()
+                }
+
+                throw backendError
+            }
+        } catch (error) {
+            console.error("Registration error:", error)
+
+            if (error.message.includes("already exists") || error.message.includes("email-already-in-use")) {
+                setErrors({ email: "Un compte existe déjà avec cette adresse email" })
+            } else if (error.message.includes("weak-password")) {
+                setErrors({ password: "Le mot de passe est trop faible" })
+            } else {
+                setErrors({ general: "Erreur lors de l'inscription. Veuillez réessayer." })
+            }
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -72,10 +160,39 @@ export default function RegisterPage() {
             [name]: type === "checkbox" ? checked : value,
         }))
 
+        if (name === "password") {
+            setPasswordStrength(checkPasswordStrength(value))
+        }
+
         // Clear error when user starts typing
         if (errors[name]) {
             setErrors((prev) => ({ ...prev, [name]: "" }))
         }
+    }
+
+    const PasswordStrengthIndicator = () => {
+        if (!formData.password) return null
+
+        const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"]
+        const strengthLabels = ["Très faible", "Faible", "Moyen", "Fort", "Très fort"]
+
+        return (
+            <div className="mt-2">
+                <div className="flex space-x-1 mb-2">
+                    {[...Array(5)].map((_, i) => (
+                        <div
+                            key={i}
+                            className={`h-1 flex-1 rounded ${i < passwordStrength.score ? strengthColors[passwordStrength.score - 1] : "bg-gray-200"
+                                }`}
+                        />
+                    ))}
+                </div>
+                <p className="text-xs text-gray-600">Force: {strengthLabels[passwordStrength.score] || "Très faible"}</p>
+                {passwordStrength.feedback.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">Manque: {passwordStrength.feedback.join(", ")}</p>
+                )}
+            </div>
+        )
     }
 
     return (
@@ -108,17 +225,9 @@ export default function RegisterPage() {
                         <p className="text-gray-600 text-sm sm:text-base">Rejoignez Cryptoboost.io et commencez à investir</p>
                     </div>
 
-                    {(error || updateError) && (
+                    {errors.general && (
                         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-600 text-sm">
-                                {error?.code === "auth/email-already-in-use"
-                                    ? "Cette adresse email est déjà utilisée."
-                                    : error?.code === "auth/weak-password"
-                                        ? "Le mot de passe est trop faible."
-                                        : error?.code === "auth/invalid-email"
-                                            ? "Adresse email invalide."
-                                            : "Erreur lors de la création du compte. Veuillez réessayer."}
-                            </p>
+                            <p className="text-red-600 text-sm">{errors.general}</p>
                         </div>
                     )}
 
@@ -127,7 +236,7 @@ export default function RegisterPage() {
                         <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Prénom
+                                    Prénom *
                                 </label>
                                 <input
                                     type="text"
@@ -136,13 +245,15 @@ export default function RegisterPage() {
                                     value={formData.firstName}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 sm:py-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base"
+                                    className={`w-full px-4 py-3 sm:py-4 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base ${errors.firstName ? "border-red-300" : "border-gray-200"
+                                        }`}
                                     placeholder="Jean"
                                 />
+                                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
                             </div>
                             <div>
                                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Nom
+                                    Nom *
                                 </label>
                                 <input
                                     type="text"
@@ -151,15 +262,17 @@ export default function RegisterPage() {
                                     value={formData.lastName}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 sm:py-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base"
+                                    className={`w-full px-4 py-3 sm:py-4 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base ${errors.lastName ? "border-red-300" : "border-gray-200"
+                                        }`}
                                     placeholder="Dupont"
                                 />
+                                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
                             </div>
                         </div>
 
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                                Adresse email
+                                Adresse email *
                             </label>
                             <input
                                 type="email"
@@ -168,14 +281,34 @@ export default function RegisterPage() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-3 sm:py-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base"
+                                className={`w-full px-4 py-3 sm:py-4 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base ${errors.email ? "border-red-300" : "border-gray-200"
+                                    }`}
                                 placeholder="jean.dupont@email.com"
                             />
+                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                        </div>
+
+                        <div>
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                                Numéro de téléphone *
+                            </label>
+                            <input
+                                type="tel"
+                                id="phone"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                required
+                                className={`w-full px-4 py-3 sm:py-4 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base ${errors.phone ? "border-red-300" : "border-gray-200"
+                                    }`}
+                                placeholder="+33 6 12 34 56 78"
+                            />
+                            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                         </div>
 
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                Mot de passe
+                                Mot de passe *
                             </label>
                             <input
                                 type="password"
@@ -188,12 +321,13 @@ export default function RegisterPage() {
                                     }`}
                                 placeholder="••••••••"
                             />
+                            <PasswordStrengthIndicator />
                             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                         </div>
 
                         <div>
                             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                                Confirmer le mot de passe
+                                Confirmer le mot de passe *
                             </label>
                             <input
                                 type="password"
@@ -248,10 +382,10 @@ export default function RegisterPage() {
 
                         <button
                             type="submit"
-                            disabled={loading || updating}
+                            disabled={isSubmitting || firebaseLoading}
                             className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 sm:py-4 px-4 rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-base"
                         >
-                            {loading || updating ? (
+                            {isSubmitting || firebaseLoading ? (
                                 <>
                                     <svg
                                         className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"

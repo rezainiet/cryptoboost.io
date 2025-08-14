@@ -27,7 +27,7 @@ const Hero = () => {
                 <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     {/* Left Content */}
                     <div
-                        className={`transform transition-all duration-1000 ${isVisible ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"}`}
+                        className={`transform transition-all duration-1000 font-mono ${isVisible ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"}`}
                     >
                         <h1 className="hero-title text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
                             Le Protocole
@@ -59,15 +59,15 @@ const Hero = () => {
                     </div>
 
                     {/* Right Content - 3D Robot and Cards */}
-                    <div className="relative flex justify-center items-center min-h-[400px] md:min-h-[500px]">
+                    <div className="relative flex justify-center items-center min-h-[500px] md:min-h-[600px] lg:min-h-[650px]">
                         {/* Glowing Sphere Background */}
                         <div className="absolute inset-0 flex justify-center items-center">
-                            <div className="w-80 h-80 md:w-96 md:h-96 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 blur-3xl animate-pulse"></div>
+                            <div className="w-80 h-80 md:w-96 md:h-96 lg:w-[420px] lg:h-[420px] rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 blur-3xl animate-pulse"></div>
                         </div>
 
-                        {/* Robot Character */}
-                        <div className="relative z-10 w-48 h-48 md:w-64 md:h-64 bg-gradient-to-b from-gray-300 to-gray-600 rounded-full flex items-center justify-center shadow-2xl">
-                            <div className="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-b from-gray-800 to-black rounded-full flex items-center justify-center relative">
+                        {/* Robot Character - Centered */}
+                        <div className="relative z-20 w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 bg-gradient-to-b from-gray-300 to-gray-600 rounded-full flex items-center justify-center shadow-2xl">
+                            <div className="w-32 h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 bg-gradient-to-b from-gray-800 to-black rounded-full flex items-center justify-center relative">
                                 {/* Robot Eyes */}
                                 <div className="flex space-x-4">
                                     <div className="w-4 h-4 bg-lime-400 rounded-full animate-pulse shadow-lg shadow-lime-400/50"></div>
@@ -79,58 +79,129 @@ const Hero = () => {
                             </div>
                         </div>
 
-                        {/* Floating Yield Cards - Desktop */}
-                        <div className="hidden md:block">
-                            {yieldCards.map((card, index) => (
-                                <div
-                                    key={index}
-                                    className={`absolute bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-xl transform transition-all duration-1000 hover:scale-105 floating-card ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-                                        }`}
-                                    style={{
-                                        animationDelay: `${index * 200}ms`,
-                                        left: `${50 + Math.cos((index * 72 * Math.PI) / 180) * 120}px`,
-                                        top: `${50 + Math.sin((index * 72 * Math.PI) / 180) * 120}px`,
-                                    }}
-                                >
-                                    <div className="flex items-center space-x-3">
-                                        <div
-                                            className={`w-8 h-8 ${card.color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
-                                        >
-                                            {card.icon}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-gray-800 text-lg">{card.percentage}</div>
-                                            <div className="text-gray-600 text-xs">{card.detail}</div>
-                                        </div>
+                        {/* Floating Yield Cards - Desktop & Tablet */}
+                        <div className="hidden md:block absolute inset-0">
+                            {/* Top Cards */}
+                            <div
+                                className={`absolute top-8 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-10 opacity-0"}`}
+                                style={{ animationDelay: "0ms" }}
+                            >
+                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                    <div
+                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[0].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                    >
+                                        {yieldCards[0].icon}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[0].percentage}</div>
+                                        <div className="text-gray-600 text-xs">{yieldCards[0].detail}</div>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* Top Right Card */}
+                            <div
+                                className={`absolute top-16 right-4 lg:right-8 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-10 opacity-0"}`}
+                                style={{ animationDelay: "200ms" }}
+                            >
+                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                    <div
+                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[1].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                    >
+                                        {yieldCards[1].icon}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[1].percentage}</div>
+                                        <div className="text-gray-600 text-xs">{yieldCards[1].detail}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Middle Left Card */}
+                            <div
+                                className={`absolute top-1/2 left-2 lg:left-4 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-10 opacity-0"}`}
+                                style={{ animationDelay: "400ms" }}
+                            >
+                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                    <div
+                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[2].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                    >
+                                        {yieldCards[2].icon}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[2].percentage}</div>
+                                        <div className="text-gray-600 text-xs">{yieldCards[2].detail}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bottom Left Card */}
+                            <div
+                                className={`absolute bottom-16 left-8 lg:left-12 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+                                style={{ animationDelay: "600ms" }}
+                            >
+                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                    <div
+                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[3].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                    >
+                                        {yieldCards[3].icon}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[3].percentage}</div>
+                                        <div className="text-gray-600 text-xs">{yieldCards[3].detail}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bottom Right Card */}
+                            <div
+                                className={`absolute bottom-8 right-12 lg:right-16 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+                                style={{ animationDelay: "800ms" }}
+                            >
+                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                    <div
+                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[4].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                    >
+                                        {yieldCards[4].icon}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[4].percentage}</div>
+                                        <div className="text-gray-600 text-xs">{yieldCards[4].detail}</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Floating Yield Cards - Mobile */}
-                        <div className="md:hidden absolute -bottom-20 left-0 right-0 flex flex-wrap justify-center gap-2">
-                            {yieldCards.slice(0, 3).map((card, index) => (
-                                <div key={index} className="bg-white/90 backdrop-blur-sm rounded-xl p-3 shadow-xl">
-                                    <div className="flex items-center space-x-2">
-                                        <div
-                                            className={`w-6 h-6 ${card.color} rounded-full flex items-center justify-center text-white font-bold text-xs`}
-                                        >
-                                            {card.icon}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-gray-800 text-sm">{card.percentage}</div>
-                                            <div className="text-gray-600 text-xs">{card.detail}</div>
+                        {/* Mobile Yield Cards - Stacked below robot */}
+                        <div className="md:hidden absolute -bottom-24 left-0 right-0 px-4">
+                            <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
+                                {yieldCards.slice(0, 4).map((card, index) => (
+                                    <div
+                                        key={index}
+                                        className={`bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-xl transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+                                        style={{ animationDelay: `${index * 150}ms` }}
+                                    >
+                                        <div className="flex items-center space-x-2">
+                                            <div
+                                                className={`w-6 h-6 ${card.color} rounded-full flex items-center justify-center text-white font-bold text-xs`}
+                                            >
+                                                {card.icon}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-gray-800 text-sm">{card.percentage}</div>
+                                                <div className="text-gray-600 text-xs truncate">{card.detail}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Bottom Section */}
-            <div className="relative z-10 bg-white/5 backdrop-blur-sm mt-16 md:mt-0">
+            <div className="relative z-10 bg-white/5 backdrop-blur-sm mt-24 md:mt-16 lg:mt-0">
                 <div className="max-w-7xl mx-auto px-4 md:px-8 py-16">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                         <div>
