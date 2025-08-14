@@ -8,6 +8,7 @@ const {
   getUserByEmail,
   deleteUser,
   logActivity, // Added logActivity import
+  getUserActivityLogs, // Added getUserActivityLogs import
 } = require("../Controllers/userController")
 const router = express.Router()
 
@@ -19,5 +20,6 @@ router.delete("/delete/:id", deleteUser)
 router.patch("/update/:email", updateUserProfile)
 router.get("/:email", getUserByEmail)
 router.post("/activity-log", logActivity) // Added activity log route
+router.get("/activity-logs/:email", getUserActivityLogs) // Added route to get user activity logs
 
 module.exports = router

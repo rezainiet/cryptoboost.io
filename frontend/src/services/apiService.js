@@ -107,6 +107,12 @@ class ApiService {
             console.error("Failed to log user activity:", error)
         }
     }
+
+    async getUserActivityLogs(email) {
+        return this.makeRequest(`/users/activity-logs/${email}`)
+    }
 }
 
-export default new ApiService()
+const apiService = new ApiService()
+export { apiService }
+export default apiService

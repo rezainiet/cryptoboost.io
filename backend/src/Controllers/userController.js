@@ -306,7 +306,22 @@ const logActivity = async (req, res) => {
     }
 
     // Insert into activity logs collection
-    const result = await activityLogsCollection.insertOne(activityLog);
+    const result = await activityLogsCollection.insertOne(activityLog)
+
+    // Also update user's activity logs array
+    await userCollection.updateOne(
+      { email },
+      {
+        $set: { lastActive: Date.now() },
+        $push: {
+          activityLogs: {
+            action,
+            timestamp: moment().format("YYYY-MM-DD HH:mm:ss"),
+            ip: req.ip || req.connection.remoteAddress,
+          },
+        },
+      },
+    )
 
     res.send({
       success: true,
@@ -322,6 +337,45 @@ const logActivity = async (req, res) => {
   }
 }
 
+const getUserActivityLogs = async (req, res) => {
+  const { email } = req.params
+
+  try {
+    // Find user to verify they exist
+    const user = await userCollection.findOne({ email })
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      })
+    }
+
+    // Get activity logs from user's activityLogs array (most recent first)
+    const userActivityLogs = user.activityLogs || []
+
+    // Sort by timestamp (most recent first)
+    const sortedLogs = userActivityLogs.sort((a, b) => {
+      return new Date(b.timestamp) - new Date(a.timestamp)
+    })
+
+    // Limit to last 50 activities
+    const recentLogs = sortedLogs.slice(0, 50)
+
+    res.send({
+      success: true,
+      data: recentLogs,
+      total: recentLogs.length,
+      message: "Activity logs retrieved successfully",
+    })
+  } catch (error) {
+    console.error("Error fetching activity logs:", error)
+    res.status(500).send({
+      success: false,
+      message: "Internal server error while fetching activity logs",
+    })
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
@@ -331,4 +385,5 @@ module.exports = {
   updateUserProfile,
   deleteUser,
   logActivity,
+  getUserActivityLogs,
 }
