@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useAuthState } from "react-firebase-hooks/auth"
 import { useLocation, useNavigate } from "react-router-dom"
+import { auth } from "../../firebase"
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:9000"
 
@@ -12,6 +14,7 @@ const paymentOptions = [
 ]
 
 const PaymentPage = () => {
+    const [user] = useAuthState(auth)
     const location = useLocation()
     const navigate = useNavigate()
 
@@ -19,29 +22,26 @@ const PaymentPage = () => {
     const [selectedPayment, setSelectedPayment] = useState(location.state?.network || "BTC")
     const [copied, setCopied] = useState("")
     const [timeLeft, setTimeLeft] = useState(0)
-    const [order, setOrder] = useState(null) // { orderId, address, expiresAt, amountFiat, package, network }
+    const [order, setOrder] = useState(null)
 
-    // Countdown from server-provided expiresAt
+    // Countdown timer
     useEffect(() => {
-        let timer
-        if (order?.expiresAt) {
-            const tick = () => {
-                const remaining = Math.max(0, Math.floor((order.expiresAt - Date.now()) / 1000))
-                setTimeLeft(remaining)
-            }
-            tick()
-            timer = setInterval(tick, 1000)
+        if (!order?.expiresAt) return
+        const tick = () => {
+            const remaining = Math.max(0, Math.floor((order.expiresAt - Date.now()) / 1000))
+            setTimeLeft(remaining)
         }
-        return () => timer && clearInterval(timer)
+        tick()
+        const timer = setInterval(tick, 1000)
+        return () => clearInterval(timer)
     }, [order?.expiresAt])
 
-    // On first load OR when network changes, create or refetch order
+    // Create/fetch order on first load or when network changes
     useEffect(() => {
         async function ensureOrder() {
-            // If we already have an order but network selection changed, create a new order
             if (!initialPkg) return
 
-            // Check if there's an existing orderId in navigation state (e.g., after refresh)
+            // Check if existing orderId in location state
             if (location.state?.orderId && !order) {
                 const res = await fetch(`${API_BASE}/payments/${location.state.orderId}`)
                 if (res.ok) {
@@ -51,21 +51,32 @@ const PaymentPage = () => {
                 }
             }
 
-            // Create fresh order
+            // Create fresh order for selected network
             const res = await fetch(`${API_BASE}/payments/create-order`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pkg: initialPkg, network: selectedPayment, userEmail: location.state?.userEmail || null }),
+                body: JSON.stringify({
+                    pkg: initialPkg,
+                    network: selectedPayment,
+                    userEmail: location.state?.userEmail || null
+                }),
             })
             if (res.ok) {
                 const data = await res.json()
                 setOrder(data.order)
-                // Persist orderId to navigation state so refreshes can refetch it
-                navigate("/payment", { replace: true, state: { package: data.order.package, network: data.order.network, orderId: data.order.orderId } })
+                // Persist orderId in navigation state for refresh
+                navigate("/payment", {
+                    replace: true,
+                    state: {
+                        package: data.order.package,
+                        network: data.order.network,
+                        orderId: data.order.orderId,
+                        userEmail: user?.email || null
+                    },
+                })
             }
         }
         ensureOrder()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedPayment])
 
     const formatTime = (seconds) => {
@@ -99,12 +110,8 @@ const PaymentPage = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900 py-8 px-4">
-            <div className="absolute inset-0">
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "2s" }}></div>
-            </div>
-
             <div className="relative max-w-4xl mx-auto">
+                {/* Header */}
                 <div className="text-center mb-8">
                     <button onClick={() => navigate(-1)} className="inline-flex items-center space-x-2 text-slate-400 hover:text-white transition-colors mb-6">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +141,6 @@ const PaymentPage = () => {
                     {/* Package Summary */}
                     <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-600/30 rounded-2xl p-6">
                         <h2 className="text-2xl font-bold text-white mb-6 font-mono">Résumé de la Commande</h2>
-
                         <div className="space-y-4 mb-6">
                             <div className="flex justify-between items-center p-4 bg-slate-700/30 rounded-lg">
                                 <span className="text-slate-400 font-mono">Package</span>
@@ -153,7 +159,6 @@ const PaymentPage = () => {
                                 <span className="text-white font-semibold">{initialPkg.timeframe}</span>
                             </div>
                         </div>
-
                         <div className="border-t border-slate-600/30 pt-4">
                             <div className="flex justify-between items-center text-lg">
                                 <span className="text-slate-300 font-mono">Total à Payer:</span>
@@ -185,15 +190,6 @@ const PaymentPage = () => {
                                             <div className="text-white font-semibold">{option.name}</div>
                                             <div className="text-slate-400 text-sm">{option.network}</div>
                                         </div>
-                                        {selectedPayment === option.id && (
-                                            <div className="ml-auto">
-                                                <div className={`w-6 h-6 bg-${option.glowColor} rounded-full flex items-center justify-center`}>
-                                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </button>
                             ))}
@@ -233,14 +229,6 @@ const PaymentPage = () => {
                             </ul>
                         </div>
                     </div>
-                </div>
-
-                {/* Support */}
-                <div className="text-center mt-8">
-                    <p className="text-slate-400 mb-4 font-mono">Besoin d'aide avec votre paiement ?</p>
-                    <button className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-bold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-cyan-500/25 font-mono">
-                        CONTACTER LE SUPPORT
-                    </button>
                 </div>
             </div>
         </div>

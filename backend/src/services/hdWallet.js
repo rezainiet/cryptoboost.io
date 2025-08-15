@@ -57,6 +57,7 @@ function deriveETHAddress(index = 0) {
 // TRX: BIP44 m/44'/195'/0'/0/index (secp256k1)
 function deriveTRXAddress(index = 0) {
     const path = `m/44'/195'/0'/0/${index}`;
+    console.log(index)
     const node = getRootNode().derivePath(path);
     const privKeyBuffer = node.privateKey;
 
@@ -70,6 +71,7 @@ function deriveTRXAddress(index = 0) {
 };
 
 function deriveAddressByNetwork(network, index) {
+    // console.log("hdwallet network", index, network)
     switch (network.toUpperCase()) {
         case "BTC":
             return deriveBTCAddress(index);
