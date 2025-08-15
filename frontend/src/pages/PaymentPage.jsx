@@ -58,7 +58,7 @@ const PaymentPage = () => {
                 body: JSON.stringify({
                     pkg: initialPkg,
                     network: selectedPayment,
-                    userEmail: location.state?.userEmail || null
+                    userEmail: user?.email || null
                 }),
             })
             if (res.ok) {
