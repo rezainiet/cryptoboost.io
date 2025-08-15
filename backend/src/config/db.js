@@ -22,8 +22,16 @@ const getUserCollection = () => {
 const getActivityLogs = () => {
   return client.db("userCollection").collection("activity_logs");
 };
+const getOrdersCollection = () => {
+  return client.db("userCollection").collection("orders");
+};
+const getCountersCollection = () => {
+  return client.db("userCollection").collection("counters");
+};
 module.exports = {
   connectDB,
   getUserCollection,
   getActivityLogs,
 };
+
+module.exports = { connectDB, getUserCollection, getActivityLogs, getOrdersCollection, getCountersCollection };

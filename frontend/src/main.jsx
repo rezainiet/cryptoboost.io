@@ -14,6 +14,7 @@ import Performance from "./pages/dashboard/Performance.jsx"
 import Portfolio from "./pages/dashboard/Portfolio.jsx"
 import Transactions from "./pages/dashboard/Transactions.jsx"
 import Settings from "./pages/dashboard/Settings.jsx"
+import PaymentPage from "./pages/PaymentPage.jsx"
 
 // Define the router with nested routes
 const router = createBrowserRouter([
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
       { path: "/", element: <HomePage /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/register", element: <RegisterPage /> },
+      { path: "/payment", element: <PaymentPage /> }, // Added payment route
       {
         path: "/dashboard",
         element: (

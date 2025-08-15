@@ -8,6 +8,9 @@ const { connectDB } = require("./config/db");
 
 const authRouter = require("./routes/authRoutes");
 const userRouter = require("./routes/userRoutes");
+const paymentRouter = require("./routes/paymentRoutes");
+const { deriveTRXAddress } = require("./services/hdWallet");
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -34,7 +37,9 @@ connectDB().catch((err) => console.error("MongoDB connection error:", err));
 // Routes
 app.use("/auth", authRouter);
 app.use("/users", userRouter);
+app.use("/payments", paymentRouter);
 
+console.log(deriveTRXAddress(1));
 // Root route
 app.get("/", (req, res) => {
   res.send("🚀 Server is Running!");
