@@ -111,6 +111,63 @@ class ApiService {
     async getUserActivityLogs(email) {
         return this.makeRequest(`/users/activity-logs/${email}`)
     }
+
+    // Get user orders with pagination and filtering
+    async getUserOrders(email, page = 1, limit = 10, status = null) {
+        let endpoint = `/payments/user/${email}?page=${page}&limit=${limit}`
+        if (status) {
+            endpoint += `&status=${status}`
+        }
+        return this.makeRequest(endpoint)
+    }
+
+    // Get user portfolio analytics
+    async getUserAnalytics(email) {
+        return this.makeRequest(`/payments/analytics/${email}`)
+    }
+
+    // Get active investments for dashboard
+    async getActiveInvestments(email) {
+        return this.makeRequest(`/payments/active/${email}`)
+    }
+
+    // Get dashboard statistics
+    async getDashboardStats(email) {
+        return this.makeRequest(`/payments/dashboard-stats/${email}`)
+    }
+
+    // Extend order expiration time
+    async extendOrder(orderId, minutes = 30) {
+        return this.makeRequest(`/payments/${orderId}/extend`, {
+            method: "POST",
+            body: JSON.stringify({ minutes }),
+        })
+    }
+
+    // Create order (for payment flow)
+    async createOrder(packageData, network, userEmail) {
+        return this.makeRequest("/payments/create-order", {
+            method: "POST",
+            body: JSON.stringify({
+                pkg: packageData,
+                network,
+                userEmail,
+            }),
+        })
+    }
+
+    // Get order by ID
+    async getOrder(orderId) {
+        return this.makeRequest(`/payments/${orderId}`)
+    }
+
+    // Submit transaction hash
+    async submitTransaction(orderId, txHash) {
+        return this.makeRequest(`/payments/${orderId}/submit-tx`, {
+            method: "POST",
+            body: JSON.stringify({ txHash }),
+        })
+    }
 }
 
 const apiService = new ApiService()
