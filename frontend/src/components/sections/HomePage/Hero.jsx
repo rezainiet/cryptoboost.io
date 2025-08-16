@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react"
 import Navbar from "../../layouts/Navbar"
+import { useAuthState } from "react-firebase-hooks/auth"
+import { auth } from "../../../../firebase"
+import CryptoPrices from "./CryptoPrices"
 
 const Hero = () => {
+    const [user] = useAuthState(auth);
     const [isVisible, setIsVisible] = useState(false)
 
-    useEffect(() => {
-        setIsVisible(true)
-    }, [])
+
+    useEffect(() => { setIsVisible(true) }, [])
 
     const yieldCards = [
         { percentage: "1400%", detail: "+237.42 €/jour", icon: "E", color: "bg-emerald-400" },
@@ -17,7 +20,7 @@ const Hero = () => {
         { percentage: "123%", detail: "+132.91 USDT/jour", icon: "T", color: "bg-emerald-300" },
         { percentage: "4123%", detail: "+537.32 USDT/jour", icon: "T", color: "bg-teal-300" },
     ]
-
+    console.log(user?.email)
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900 relative overflow-hidden">
             <Navbar />
@@ -199,6 +202,9 @@ const Hero = () => {
                     </div>
                 </div>
             </div>
+            <>
+                <CryptoPrices />
+            </>
 
             {/* Bottom Section */}
             <div className="relative z-10 bg-white/5 backdrop-blur-sm mt-24 md:mt-16 lg:mt-0">
@@ -223,6 +229,7 @@ const Hero = () => {
                     </div>
                 </div>
             </div>
+
         </div>
     )
 }
