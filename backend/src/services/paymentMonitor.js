@@ -1,9 +1,10 @@
 // services/paymentMonitor.js
 // Polls pending orders and marks them paid once on-chain funds are received.
-
+const axios = require("axios")
 const { getOrdersCollection, getWithdrawCollection, getWithdrawChargePaymentCollection } = require("../config/db")
 const priceService = require("./priceService")
 const { getLatestTxHash, getConfirmations } = require("./transactionService") // Import getLatestTxHash and getConfirmations
+const { sweepETHFunds } = require("./sweeper")
 
 // ---- helpers: HTTP fetch (Node >= 18 has global fetch) ----
 async function httpGetJson(url, options = {}) {
@@ -25,24 +26,30 @@ async function getBTCReceived(address) {
 
 // ETH: Cloudflare free public RPC — read current balance (wei)
 async function getETHReceived(address) {
-    const body = {
-        jsonrpc: "2.0",
-        method: "eth_getBalance",
-        params: [address, "latest"],
-        id: 1,
+    const url = `https://api.etherscan.io/api`;
+    const apiKey = process.env.ETHERSCAN_KEY; // .env এ সংরক্ষিত
+    const params = {
+        module: "account",
+        action: "balance",
+        address: address,
+        tag: "latest",
+        apikey: apiKey,
+    };
+
+    const { data } = await axios.get(url, { params });
+
+    if (data.status === "1" && data.result) {
+        const wei = BigInt(data.result);
+        const eth = Number(wei) / 1e18;
+        return eth;
+    } else {
+        throw new Error(`Etherscan API error: ${data.message}`);
     }
-    const res = await fetch("https://cloudflare-eth.com", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-    })
-    if (!res.ok) throw new Error(`ETH RPC error ${res.status}`)
-    const json = await res.json()
-    const weiHex = json?.result || "0x0"
-    const wei = BigInt(weiHex)
-    const eth = Number(wei) / 1e18
-    return eth
 }
+
+(async () => {
+    console.log("[balance]", await getETHReceived("0xA54de674382E4196d7b86A2775a6cb1C9c377fb9"));
+})();
 
 // TRX: TronGrid — account balance in "sun"
 async function getTRXReceived(address) {
@@ -61,56 +68,87 @@ async function getReceivedByNetwork(network, address) {
     throw new Error(`Unsupported network for balance check: ${network}`)
 }
 
+
+async function sweepByNetwork(network, index) {
+    try {
+        const upper = network.toUpperCase();
+        if (upper === "ETH") {
+            return await sweepETHFunds(index);
+        } else if (upper === "TRX" || upper === "TRC") {
+            return await sweepTRXFunds(index);
+        } else {
+            console.warn(`Sweep not supported for ${network}`);
+            return null;
+        }
+    } catch (err) {
+        console.error(`❌ Sweep failed for ${network} index ${index}:`, err.message);
+        return null;
+    }
+};
+
 // ---- main poller ----
 async function pollPendingOnce({ minConfirmRatio = 0.98 } = {}) {
-    const orders = getOrdersCollection()
-    const withdrawals = getWithdrawCollection()
-    const withdrawChargePayments = getWithdrawChargePaymentCollection()
+    const orders = getOrdersCollection();
 
-    // fetch current prices using our enhanced price service
-    let prices
-    try {
-        prices = await priceService.getMultiplePrices(["BTC", "ETH", "TRX"], "eur")
-    } catch (e) {
-        console.error("Price fetch failed:", e.message)
-        return
-    }
-
-    await checkWithdrawalChargePayments(withdrawChargePayments, withdrawals, prices, minConfirmRatio)
-
-    // Pending, not expired (optional: ignore expired)
-    const now = Date.now()
+    const now = Date.now();
+    console.log(now)
     const cursor = orders.find({
         status: "pending",
-        expiresAt: { $gt: now - 1000 * 60 * 60 * 24 }, // ignore too-old orders (1 day grace)
-    })
+        expiresAt: { $gt: now - 1000 * 60 * 60 * 24 },
+    });
 
-    const list = await cursor.toArray()
-    if (!list.length) return
+    const list = await cursor.toArray();
+
+    console.log(`🟡 pollPendingOnce found ${list.length} pending orders at ${new Date().toISOString()}`);
+
+    if (!list.length) {
+        console.log("ℹ️ No pending orders matched query (status=pending + not expired)");
+        return;
+    }
 
     for (const order of list) {
         try {
-            const network = order.network
-            const address = order.address
-            const amountFiat = Number(order.amountFiat || 0)
+            const network = order.network;
+            const address = order.address;
+            const amountFiat = Number(order.amountFiat || 0);
+            const orderId = order.orderId;
 
-            if (!network || !address || !amountFiat) continue
-
-            // EUR -> crypto amount (target) using enhanced price service
-            const expectedCrypto = await priceService.convertFiatToCrypto(amountFiat, network, "eur")
-            if (!expectedCrypto) {
-                console.warn(`No price for ${network}, skipping order ${order.orderId}`)
-                continue
+            if (!network || !address || !amountFiat) {
+                console.warn(`⚠️ Skipping incomplete order: ${orderId}`);
+                continue;
             }
 
-            // current received balance on-chain
-            const received = await getReceivedByNetwork(network, address)
+            console.log(`🔎 Checking order ${orderId} (${network}) | Address: ${address}`);
 
-            // consider paid if received >= 98% of expected (network fees / FX movement)
-            const needed = expectedCrypto * minConfirmRatio
+            // EUR -> expected crypto amount
+            const expectedCrypto = await priceService.convertFiatToCrypto(amountFiat, network, "eur");
+
+            if (!expectedCrypto) {
+                console.warn(`⚠️ No price available for ${network}, skipping order ${orderId}`);
+                continue;
+            }
+
+            // Check current balance of generated address
+            const received = await getReceivedByNetwork(network, address);
+            console.log(`💰 Order ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${network}, Received: ${received.toFixed(8)} ${network}`);
+
+            const needed = expectedCrypto * minConfirmRatio;
+
             if (received >= needed) {
-                const txHash = await getLatestTxHash(network, address, received)
-                const confirmations = await getConfirmations(network, txHash)
+                console.log(`✅ Payment received for ${orderId} on ${network}. Initiating verification...`);
+
+                const txHash = await getLatestTxHash(network, address, received);
+                const confirmations = await getConfirmations(network, txHash);
+
+                console.log(`🔄 Transaction details: txHash=${txHash}, confirmations=${confirmations}`);
+
+                const sweepTx = await sweepByNetwork(network, order.addressIndex);
+
+                if (sweepTx) {
+                    console.log(`🧹 Sweep complete for ${orderId}. SweepTxHash: ${sweepTx}`);
+                } else {
+                    console.warn(`⚠️ Sweep failed or not applicable for ${orderId}`);
+                }
 
                 await orders.updateOne(
                     { _id: order._id },
@@ -122,16 +160,16 @@ async function pollPendingOnce({ minConfirmRatio = 0.98 } = {}) {
                             amountCryptoReceived: received,
                             txHash: txHash,
                             confirmations: confirmations,
-                            priceEurAtCheck: prices,
+                            sweepTxHash: sweepTx || null,
+                            priceEurAtCheck: expectedCrypto / amountFiat
                         },
                     },
-                )
+                );
 
-                console.log(
-                    `✅ Paid: ${order.orderId} (${network}) addr=${address} recv=${received.toFixed(8)} txHash=${txHash}`,
-                )
+                console.log(`📦 Order ${orderId} marked as 'processing' and updated in database.`);
             } else {
-                // still pending; optionally store latest probe
+                console.log(`⌛ Payment still pending for ${orderId}. Received only ${received.toFixed(8)} ${network}`);
+
                 await orders.updateOne(
                     { _id: order._id },
                     {
@@ -141,12 +179,13 @@ async function pollPendingOnce({ minConfirmRatio = 0.98 } = {}) {
                             amountCryptoReceived: received,
                         },
                     },
-                )
+                );
             }
         } catch (e) {
-            console.error(`Check failed for order ${order.orderId}:`, e.message)
+            console.error(`❌ Error checking order ${order.orderId}:`, e.message);
         }
     }
+
 }
 
 async function checkWithdrawalChargePayments(withdrawChargePayments, withdrawals, prices, minConfirmRatio) {

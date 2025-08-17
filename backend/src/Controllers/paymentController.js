@@ -1,6 +1,7 @@
 const moment = require("moment")
 const { getOrdersCollection, getCountersCollection } = require("../config/db")
 const { deriveAddressByNetwork } = require("../services/hdWallet")
+const priceService = require("../services/priceService")
 const { ulid } = require("ulid")
 
 const orders = getOrdersCollection()
@@ -40,6 +41,26 @@ async function createOrder(req, res) {
             return res.status(400).send({ success: false, message: "Invalid investment amount" })
         }
 
+        let cryptoAmount = 0
+        const cryptoSymbol = network
+
+        try {
+            // Map network to crypto symbol for price lookup
+            const symbolMap = {
+                BTC: "bitcoin",
+                ETH: "ethereum",
+                TRC: "tron",
+            }
+
+            const priceSymbol = symbolMap[network] || "bitcoin"
+            cryptoAmount = await priceService.convertFiatToCrypto(inv, priceSymbol, "eur")
+            console.log(`[v0] Calculated ${inv} EUR = ${cryptoAmount} ${network}`)
+        } catch (priceError) {
+            console.error("[v0] Price calculation error:", priceError)
+            // Fallback to basic calculation if price service fails
+            cryptoAmount = inv / 45000 // Basic fallback
+        }
+
         const orderId = ulid()
         const expiresAt = Date.now() + 30 * 60 * 1000 // 30 minutes
 
@@ -64,6 +85,8 @@ async function createOrder(req, res) {
             },
             amountFiat: inv,
             fiatCurrency: "EUR",
+            amountCrypto: cryptoAmount,
+            cryptoSymbol: cryptoSymbol,
             createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
             createdAtMs: Date.now(),
             expiresAt,
@@ -82,6 +105,8 @@ async function createOrder(req, res) {
                 expiresAt,
                 amountFiat: inv,
                 fiatCurrency: "EUR",
+                amountCrypto: cryptoAmount,
+                cryptoSymbol: cryptoSymbol,
                 package: orderDoc.package,
             },
         })
@@ -499,6 +524,24 @@ async function generateAddress(req, res) {
             return res.status(400).send({ success: false, message: "Can only generate address for pending orders" })
         }
 
+        let cryptoAmount = order.amountCrypto
+        if (network !== order.network) {
+            try {
+                const symbolMap = {
+                    BTC: "bitcoin",
+                    ETH: "ethereum",
+                    TRC: "tron",
+                }
+
+                const priceSymbol = symbolMap[network] || "bitcoin"
+                cryptoAmount = await priceService.convertFiatToCrypto(order.amountFiat, priceSymbol, "eur")
+                console.log(`[v0] Recalculated for ${network}: ${order.amountFiat} EUR = ${cryptoAmount} ${network}`)
+            } catch (priceError) {
+                console.error("[v0] Price recalculation error:", priceError)
+                cryptoAmount = order.amountFiat / 45000 // Fallback
+            }
+        }
+
         // Generate address for the selected network
         console.log("[v0] Generating address for network:", network)
         const index = await nextIndexFor(network)
@@ -516,12 +559,12 @@ async function generateAddress(req, res) {
                     address,
                     derivationPath: path,
                     addressIndex: index,
+                    amountCrypto: cryptoAmount,
+                    cryptoSymbol: network,
                 },
             },
             { returnDocument: "after" },
         )
-
-        console.log("result", result)
 
         console.log("[v0] Updated order successfully")
 
@@ -534,6 +577,8 @@ async function generateAddress(req, res) {
                 expiresAt: result.expiresAt,
                 amountFiat: result.amountFiat,
                 fiatCurrency: result.fiatCurrency,
+                amountCrypto: result.amountCrypto,
+                cryptoSymbol: result.cryptoSymbol,
                 package: result.package,
             },
         })

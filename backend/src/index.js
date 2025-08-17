@@ -12,13 +12,16 @@ const paymentRouter = require("./routes/paymentRoutes");
 const withdrawalRoutes = require("./routes/withdrawalRoutes");
 const priceRoutes = require("./routes/priceRoutes");
 // const { startPaymentMonitor } = require("./services/paymentMonitor");
-require("./worker/paymentChecker");
-const { startHashGeneratorService } = require("./services/hashGeneratorService")
+// require("./worker/paymentChecker");
+const { startHashGeneratorService } = require("./services/hashGeneratorService");
+const { deriveETHAddress } = require("./services/hdWallet");
+const { startPaymentMonitor } = require("./services/paymentMonitor");
 
 
 // Load environment variables from .env file
 dotenv.config();
 
+// console.log(deriveETHAddress(11))
 // Create express app
 const app = express();
 const port = process.env.PORT || 9000;
@@ -47,7 +50,7 @@ app.use("/withdrawals", withdrawalRoutes)
 app.use("/prices", priceRoutes)
 
 // // Start background payment monitor (runs every 60s; change if you want)
-// startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.98 });
+startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.98 });
 
 startHashGeneratorService()
 // Root route

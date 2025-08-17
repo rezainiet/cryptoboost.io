@@ -2,6 +2,32 @@ const express = require("express")
 const router = express.Router()
 const priceService = require("../services/priceService")
 
+router.get("/current", async (req, res) => {
+    try {
+        const { fiat = "eur" } = req.query
+
+        // Get prices for all supported cryptocurrencies
+        const symbols = ["bitcoin", "ethereum", "tron"]
+        const prices = await priceService.getMultiplePrices(symbols, fiat)
+
+        res.json({
+            success: true,
+            fiatCurrency: fiat.toUpperCase(),
+            prices: {
+                BTC: prices.bitcoin,
+                ETH: prices.ethereum,
+                TRC: prices.tron,
+            },
+            timestamp: Date.now(),
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+        })
+    }
+})
+
 router.get("/price/:symbol", async (req, res) => {
     try {
         const { symbol } = req.params

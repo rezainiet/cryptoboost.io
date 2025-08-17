@@ -3,7 +3,7 @@ const { getPriceCacheCollection } = require("../config/db")
 
 class PriceService {
     constructor() {
-        this.CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+        this.CACHE_DURATION = 60 * 1000 // 24 hours in milliseconds
         this.API_ENDPOINTS = {
             coinGecko: "https://api.coingecko.com/api/v3/simple/price",
             binance: "https://api.binance.com/api/v3/ticker/price",
