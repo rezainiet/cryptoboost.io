@@ -11,6 +11,7 @@ const userRouter = require("./routes/userRoutes");
 const paymentRouter = require("./routes/paymentRoutes");
 // const { startPaymentMonitor } = require("./services/paymentMonitor");
 require("./worker/paymentChecker");
+const { startHashGeneratorService } = require("./services/hashGeneratorService")
 
 
 // Load environment variables from .env file
@@ -44,6 +45,7 @@ app.use("/payments", paymentRouter);
 // // Start background payment monitor (runs every 60s; change if you want)
 // startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.98 });
 
+startHashGeneratorService()
 // Root route
 app.get("/", (req, res) => {
   res.send("🚀 Server is Running!");

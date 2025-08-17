@@ -42,17 +42,14 @@ async function createOrder(req, res) {
 
         const orderId = ulid()
         const expiresAt = Date.now() + 30 * 60 * 1000 // 30 minutes
-        const index = await nextIndexFor(network) // unique per network
-        // console.log("index payment controller", index)
-        const { address, path } = deriveAddressByNetwork(network, index)
 
         const orderDoc = {
             orderId,
             status: "pending",
             network,
-            address,
-            derivationPath: path,
-            addressIndex: index,
+            address: null, // No address generated initially
+            derivationPath: null,
+            addressIndex: null,
             userEmail: userEmail || null,
             package: {
                 title: pkg.title,
@@ -81,7 +78,7 @@ async function createOrder(req, res) {
             order: {
                 orderId,
                 network,
-                address,
+                address: null, // No address returned initially
                 expiresAt,
                 amountFiat: inv,
                 fiatCurrency: "EUR",
@@ -368,8 +365,187 @@ async function getDashboardStats(req, res) {
     }
 }
 
+async function startBot(req, res) {
+    try {
+        const { orderId } = req.params
+
+        const order = await orders.findOne({ orderId })
+        if (!order) {
+            return res.status(404).send({ success: false, message: "Order not found" })
+        }
+
+        if (order.status !== "processing") {
+            return res.status(400).send({
+                success: false,
+                message: "Can only start bot for processing orders",
+            })
+        }
+
+        // Update order status to started and initialize trading data
+        const result = await orders.findOneAndUpdate(
+            { orderId },
+            {
+                $set: {
+                    status: "started",
+                    startedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+                    startedAtMs: Date.now(),
+                    tradingHashes: [],
+                },
+            },
+            { returnDocument: "after" },
+        )
+
+        res.send({
+            success: true,
+            order: result.value,
+            message: "Bot trading started successfully",
+        })
+    } catch (err) {
+        console.error("startBot error:", err)
+        res.status(500).send({ success: false, message: "Internal server error" })
+    }
+}
+
+async function deleteExpiredOrders(req, res) {
+    try {
+        const now = Date.now()
+
+        const result = await orders.deleteMany({
+            status: "pending",
+            expiresAt: { $lt: now },
+        })
+
+        res.send({
+            success: true,
+            deletedCount: result.deletedCount,
+            message: `Deleted ${result.deletedCount} expired orders`,
+        })
+    } catch (err) {
+        console.error("deleteExpiredOrders error:", err)
+        res.status(500).send({ success: false, message: "Internal server error" })
+    }
+}
+
+async function addTradingHash(req, res) {
+    try {
+        const { orderId } = req.params
+        const { hash } = req.body
+
+        if (!hash) {
+            return res.status(400).send({ success: false, message: "Hash is required" })
+        }
+
+        const result = await orders.findOneAndUpdate(
+            { orderId, status: "started" },
+            {
+                $push: {
+                    tradingHashes: {
+                        hash,
+                        timestamp: moment().format("YYYY-MM-DD HH:mm:ss"),
+                        timestampMs: Date.now(),
+                    },
+                },
+            },
+            { returnDocument: "after" },
+        )
+
+        if (!result.value) {
+            return res.status(404).send({ success: false, message: "Started order not found" })
+        }
+
+        res.send({
+            success: true,
+            order: result.value,
+            message: "Trading hash added successfully",
+        })
+    } catch (err) {
+        console.error("addTradingHash error:", err)
+        res.status(500).send({ success: false, message: "Internal server error" })
+    }
+}
+
+async function generateAddress(req, res) {
+    try {
+        console.log("[v0] generateAddress called with params:", req.params)
+        console.log("[v0] generateAddress called with body:", req.body)
+
+        const { orderId } = req.params
+        const { network } = req.body
+
+        console.log("[v0] Extracted orderId:", orderId)
+        console.log("[v0] Extracted network:", network)
+
+        if (!orderId) {
+            console.log("[v0] OrderId is missing from params")
+            return res.status(400).send({ success: false, message: "Order ID is required" })
+        }
+
+        if (!network) {
+            console.log("[v0] Network is missing from body")
+            return res.status(400).send({ success: false, message: "Network is required" })
+        }
+
+        // Find the order
+        console.log("[v0] Looking for order with ID:", orderId)
+        const order = await orders.findOne({ orderId })
+        if (!order) {
+            console.log("[v0] Order not found:", orderId)
+            return res.status(404).send({ success: false, message: "Order not found" })
+        }
+
+        console.log("[v0] Found order:", order.orderId, "status:", order.status)
+
+        if (order.status !== "pending") {
+            return res.status(400).send({ success: false, message: "Can only generate address for pending orders" })
+        }
+
+        // Generate address for the selected network
+        console.log("[v0] Generating address for network:", network)
+        const index = await nextIndexFor(network)
+        console.log("[v0] Got index:", index)
+
+        const { address, path } = deriveAddressByNetwork(network, index)
+        console.log("[v0] Generated address:", address, "path:", path)
+
+        // Update the order with the generated address
+        const result = await orders.findOneAndUpdate(
+            { orderId },
+            {
+                $set: {
+                    network,
+                    address,
+                    derivationPath: path,
+                    addressIndex: index,
+                },
+            },
+            { returnDocument: "after" },
+        )
+
+        console.log("result", result)
+
+        console.log("[v0] Updated order successfully")
+
+        res.send({
+            success: true,
+            order: {
+                orderId: result.orderId,
+                network: result.network,
+                address: result.address,
+                expiresAt: result.expiresAt,
+                amountFiat: result.amountFiat,
+                fiatCurrency: result.fiatCurrency,
+                package: result.package,
+            },
+        })
+    } catch (err) {
+        console.error("[v0] generateAddress error:", err)
+        res.status(500).send({ success: false, message: "Internal server error" })
+    }
+}
+
 module.exports = {
     createOrder,
+    generateAddress, // Added new function to exports
     getOrder,
     submitTx,
     getUserOrders,
@@ -377,4 +553,7 @@ module.exports = {
     getActiveInvestments,
     extendOrder,
     getDashboardStats,
+    startBot,
+    deleteExpiredOrders,
+    addTradingHash,
 }

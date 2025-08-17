@@ -168,6 +168,51 @@ class ApiService {
             body: JSON.stringify({ txHash }),
         })
     }
+
+    // Start bot for processing orders
+    async startBot(orderId) {
+        return this.makeRequest(`/payments/${orderId}/start-bot`, {
+            method: "POST",
+        })
+    }
+
+    // Add trading hash to order (used by background service)
+    async addTradingHash(orderId, hash) {
+        return this.makeRequest(`/payments/${orderId}/add-hash`, {
+            method: "POST",
+            body: JSON.stringify({ hash }),
+        })
+    }
+
+    // Delete expired orders
+    async deleteExpiredOrders() {
+        return this.makeRequest("/payments/delete-expired", {
+            method: "DELETE",
+        })
+    }
+
+    // Get real-time order updates (for polling)
+    async getOrderUpdates(orderId) {
+        return this.makeRequest(`/payments/${orderId}`)
+    }
+
+    // async updateOrderNetwork(orderId, network) {
+    //   return this.makeRequest(`/payments/${orderId}/update-network`, {
+    //     method: "PATCH",
+    //     body: JSON.stringify({ network }),
+    //   })
+    // }
+
+    async getExistingPendingOrder(userEmail, packageTitle) {
+        return this.makeRequest(`/payments/user/${userEmail}?status=pending&limit=1`)
+    }
+
+    async generatePaymentAddress(orderId, network) {
+        return this.makeRequest(`/payments/${orderId}/generate-address`, {
+            method: "POST",
+            body: JSON.stringify({ network }),
+        })
+    }
 }
 
 const apiService = new ApiService()

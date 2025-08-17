@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { useLocation, useNavigate } from "react-router-dom"
 import { auth } from "../../firebase"
@@ -8,9 +8,33 @@ import { auth } from "../../firebase"
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:9000"
 
 const paymentOptions = [
-    { id: "BTC", name: "Bitcoin", symbol: "₿", color: "from-orange-400 to-yellow-500", glowColor: "orange-400", network: "Bitcoin Network" },
-    { id: "ETH", name: "Ethereum", symbol: "Ξ", color: "from-blue-400 to-purple-500", glowColor: "blue-400", network: "Ethereum Network" },
-    { id: "TRC", name: "TRON (TRC20)", symbol: "◎", color: "from-red-400 to-pink-500", glowColor: "red-400", network: "TRON Network" },
+    {
+        id: "BTC",
+        name: "Bitcoin",
+        symbol: "₿",
+        color: "from-orange-400 to-yellow-500",
+        glowColor: "orange-400",
+        network: "Bitcoin Network",
+        rate: 45000, // Example rate: 1 BTC = $45,000
+    },
+    {
+        id: "ETH",
+        name: "Ethereum",
+        symbol: "Ξ",
+        color: "from-blue-400 to-purple-500",
+        glowColor: "blue-400",
+        network: "Ethereum Network",
+        rate: 2500, // Example rate: 1 ETH = $2,500
+    },
+    {
+        id: "TRC",
+        name: "TRON (TRC20)",
+        symbol: "◎",
+        color: "from-red-400 to-pink-500",
+        glowColor: "red-400",
+        network: "TRON Network",
+        rate: 0.08, // Example rate: 1 TRX = $0.08
+    },
 ]
 
 const PaymentPage = () => {
@@ -23,8 +47,31 @@ const PaymentPage = () => {
     const [copied, setCopied] = useState("")
     const [timeLeft, setTimeLeft] = useState(0)
     const [order, setOrder] = useState(null)
+    const [isGeneratingAddress, setIsGeneratingAddress] = useState(false)
+    const [paymentAddress, setPaymentAddress] = useState(null)
+    const [qrCodeUrl, setQrCodeUrl] = useState(null)
+    const [cryptoAmount, setCryptoAmount] = useState(0)
+    const [totalWithFees, setTotalWithFees] = useState(0)
+    const [addressError, setAddressError] = useState(null)
 
-    // Countdown timer
+    const isCreatingOrder = useRef(false)
+
+    useEffect(() => {
+        if (!initialPkg) return
+
+        const baseAmount = Number(initialPkg.investment)
+        const vatRate = 0.05 // 5% VAT
+        const processingFee = 10 // €10 processing fee
+        const total = baseAmount + baseAmount * vatRate + processingFee
+        setTotalWithFees(total)
+
+        const selectedOption = paymentOptions.find((p) => p.id === selectedPayment)
+        if (selectedOption) {
+            const cryptoValue = total / selectedOption.rate
+            setCryptoAmount(cryptoValue)
+        }
+    }, [initialPkg, selectedPayment])
+
     useEffect(() => {
         if (!order?.expiresAt) return
         const tick = () => {
@@ -36,48 +83,120 @@ const PaymentPage = () => {
         return () => clearInterval(timer)
     }, [order?.expiresAt])
 
-    // Create/fetch order on first load or when network changes
     useEffect(() => {
-        async function ensureOrder() {
-            if (!initialPkg) return
+        async function createInitialOrder() {
+            if (!initialPkg || order || isCreatingOrder.current) return
 
-            // Check if existing orderId in location state
-            if (location.state?.orderId && !order) {
-                const res = await fetch(`${API_BASE}/payments/${location.state.orderId}`)
+            isCreatingOrder.current = true
+
+            try {
+                if (user?.email) {
+                    try {
+                        const existingRes = await fetch(`${API_BASE}/payments/user/${user.email}?status=pending&limit=5`)
+                        if (existingRes.ok) {
+                            const existingData = await existingRes.json()
+                            const existingOrder = existingData.orders?.find(
+                                (order) => order.package.title === initialPkg.title && order.expiresAt > Date.now(),
+                            )
+
+                            if (existingOrder) {
+                                setOrder(existingOrder)
+                                if (existingOrder.address) {
+                                    setPaymentAddress(existingOrder.address)
+                                    generateQRCode(existingOrder.address)
+                                }
+                                return
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error checking existing orders:", error)
+                    }
+                }
+
+                const res = await fetch(`${API_BASE}/payments/create-order`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        pkg: initialPkg,
+                        network: selectedPayment,
+                        userEmail: user?.email || null,
+                        generateAddress: false,
+                    }),
+                })
                 if (res.ok) {
                     const data = await res.json()
                     setOrder(data.order)
-                    return
                 }
-            }
-
-            // Create fresh order for selected network
-            const res = await fetch(`${API_BASE}/payments/create-order`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    pkg: initialPkg,
-                    network: selectedPayment,
-                    userEmail: user?.email || null
-                }),
-            })
-            if (res.ok) {
-                const data = await res.json()
-                setOrder(data.order)
-                // Persist orderId in navigation state for refresh
-                navigate("/payment", {
-                    replace: true,
-                    state: {
-                        package: data.order.package,
-                        network: data.order.network,
-                        orderId: data.order.orderId,
-                        userEmail: user?.email || null
-                    },
-                })
+            } finally {
+                isCreatingOrder.current = false
             }
         }
-        ensureOrder()
-    }, [selectedPayment])
+        createInitialOrder()
+    }, [initialPkg, user])
+
+    const generatePaymentAddress = async () => {
+        if (!order || isGeneratingAddress) return
+
+        setIsGeneratingAddress(true)
+        setAddressError(null)
+
+        try {
+            console.log("[v0] Generating address for order:", order.orderId, "network:", selectedPayment)
+
+            const res = await fetch(`${API_BASE}/payments/${order.orderId}/generate-address`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ network: selectedPayment }),
+            })
+
+            console.log("[v0] Generate address response status:", res.status)
+
+            if (res.ok) {
+                const data = await res.json()
+                console.log("[v0] Generate address response data:", data)
+
+                if (data.success && data.order && data.order.address) {
+                    const updatedOrder = data.order
+                    setPaymentAddress(updatedOrder.address)
+                    generateQRCode(updatedOrder.address)
+                    setOrder((prev) => ({
+                        ...prev,
+                        address: updatedOrder.address,
+                        network: updatedOrder.network,
+                        derivationPath: updatedOrder.derivationPath,
+                        addressIndex: updatedOrder.addressIndex,
+                    }))
+                    console.log("[v0] Address generated successfully:", updatedOrder.address)
+                } else {
+                    throw new Error("No address returned from server")
+                }
+            } else {
+                const errorData = await res.json().catch(() => ({}))
+                throw new Error(errorData.message || `Server error: ${res.status}`)
+            }
+        } catch (error) {
+            console.error("[v0] Error generating address:", error)
+            setAddressError(error.message || "Failed to generate payment address")
+        } finally {
+            setIsGeneratingAddress(false)
+        }
+    }
+
+    const generateQRCode = (address) => {
+        if (!address) return
+        const selectedOption = paymentOptions.find((p) => p.id === selectedPayment)
+        const qrData = `${selectedPayment.toLowerCase()}:${address}?amount=${cryptoAmount}`
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`
+        setQrCodeUrl(qrUrl)
+        console.log("[v0] QR code generated for address:", address)
+    }
+
+    const handleNetworkChange = (networkId) => {
+        setSelectedPayment(networkId)
+        setPaymentAddress(null)
+        setQrCodeUrl(null)
+        setAddressError(null)
+    }
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60)
@@ -102,7 +221,9 @@ const PaymentPage = () => {
             <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
                 <div className="text-center">
                     <p className="mb-4">Aucun package sélectionné.</p>
-                    <button className="px-4 py-2 rounded bg-slate-700" onClick={() => navigate(-1)}>Retour</button>
+                    <button className="px-4 py-2 rounded bg-slate-700" onClick={() => navigate(-1)}>
+                        Retour
+                    </button>
                 </div>
             </div>
         )
@@ -111,9 +232,11 @@ const PaymentPage = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900 py-8 px-4">
             <div className="relative max-w-4xl mx-auto">
-                {/* Header */}
                 <div className="text-center mb-8">
-                    <button onClick={() => navigate(-1)} className="inline-flex items-center space-x-2 text-slate-400 hover:text-white transition-colors mb-6">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="inline-flex items-center space-x-2 text-slate-400 hover:text-white transition-colors mb-6"
+                    >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
@@ -122,23 +245,26 @@ const PaymentPage = () => {
 
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
                         Finaliser le
-                        <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-orange-400 bg-clip-text text-transparent"> Paiement</span>
+                        <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
+                            {" "}
+                            Paiement
+                        </span>
                     </h1>
                     <p className="text-slate-300 text-lg">Sélectionnez votre méthode de paiement crypto préférée</p>
                 </div>
 
-                {/* Timer */}
-                <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-xl p-4 mb-8 text-center">
-                    <div className="flex items-center justify-center space-x-2 mb-2">
-                        <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                        <span className="text-red-400 font-semibold font-mono">TEMPS RESTANT POUR PAYER</span>
-                        <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                {order && (
+                    <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-xl p-4 mb-8 text-center">
+                        <div className="flex items-center justify-center space-x-2 mb-2">
+                            <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                            <span className="text-red-400 font-semibold font-mono">TEMPS RESTANT POUR PAYER</span>
+                            <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                        </div>
+                        <div className="text-3xl font-bold text-white font-mono">{formatTime(timeLeft)}</div>
                     </div>
-                    <div className="text-3xl font-bold text-white font-mono">{formatTime(timeLeft)}</div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Package Summary */}
                     <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-600/30 rounded-2xl p-6">
                         <h2 className="text-2xl font-bold text-white mb-6 font-mono">Résumé de la Commande</h2>
                         <div className="space-y-4 mb-6">
@@ -151,6 +277,14 @@ const PaymentPage = () => {
                                 <span className="text-white font-bold text-lg">€{Number(initialPkg.investment).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center p-4 bg-slate-700/30 rounded-lg">
+                                <span className="text-slate-400 font-mono">TVA (5%)</span>
+                                <span className="text-white">€{(Number(initialPkg.investment) * 0.05).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-4 bg-slate-700/30 rounded-lg">
+                                <span className="text-slate-400 font-mono">Frais de traitement</span>
+                                <span className="text-white">€10.00</span>
+                            </div>
+                            <div className="flex justify-between items-center p-4 bg-slate-700/30 rounded-lg">
                                 <span className="text-slate-400 font-mono">Retour Estimé</span>
                                 <span className="text-lime-400 font-bold text-lg">€{Number(initialPkg.returns).toLocaleString()}</span>
                             </div>
@@ -160,74 +294,159 @@ const PaymentPage = () => {
                             </div>
                         </div>
                         <div className="border-t border-slate-600/30 pt-4">
+                            <div className="flex justify-between items-center text-lg mb-2">
+                                <span className="text-slate-300 font-mono">Total à Payer (EUR):</span>
+                                <span className="text-white font-bold text-2xl">€{totalWithFees.toLocaleString()}</span>
+                            </div>
                             <div className="flex justify-between items-center text-lg">
-                                <span className="text-slate-300 font-mono">Total à Payer:</span>
-                                <span className="text-white font-bold text-2xl">€{Number(initialPkg.investment).toLocaleString()}</span>
+                                <span className="text-slate-300 font-mono">Montant en {selectedPayment}:</span>
+                                <span className="text-cyan-400 font-bold text-xl">
+                                    {cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)}{" "}
+                                    {selectedPayment}
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Payment Methods */}
                     <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-600/30 rounded-2xl p-6">
                         <h2 className="text-2xl font-bold text-white mb-6 font-mono">Méthode de Paiement</h2>
 
-                        {/* Payment Options */}
                         <div className="space-y-3 mb-6">
                             {paymentOptions.map((option) => (
                                 <button
                                     key={option.id}
-                                    onClick={() => setSelectedPayment(option.id)}
+                                    onClick={() => handleNetworkChange(option.id)}
                                     className={`w-full p-4 rounded-xl border transition-all duration-300 ${selectedPayment === option.id
                                         ? `border-${option.glowColor} bg-gradient-to-r ${option.color}/20 shadow-lg shadow-${option.glowColor}/25`
                                         : "border-slate-600/30 bg-slate-700/30 hover:border-slate-500/50"
                                         }`}
                                 >
-                                    <div className="flex items-center space-x-4">
-                                        <div className={`w-12 h-12 bg-gradient-to-r ${option.color} rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg`}>
-                                            {option.symbol}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-4">
+                                            <div
+                                                className={`w-12 h-12 bg-gradient-to-r ${option.color} rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg`}
+                                            >
+                                                {option.symbol}
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="text-white font-semibold">{option.name}</div>
+                                                <div className="text-slate-400 text-sm">{option.network}</div>
+                                            </div>
                                         </div>
-                                        <div className="text-left">
-                                            <div className="text-white font-semibold">{option.name}</div>
-                                            <div className="text-slate-400 text-sm">{option.network}</div>
+                                        <div className="text-right">
+                                            <div className="text-slate-400 text-sm">Rate</div>
+                                            <div className="text-white font-semibold">${option.rate.toLocaleString()}</div>
                                         </div>
                                     </div>
                                 </button>
                             ))}
                         </div>
 
-                        {/* Payment Address */}
-                        <div className="bg-slate-700/30 rounded-xl p-6 border border-slate-600/30">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-white font-semibold font-mono">Adresse de Paiement</h3>
-                                <div className={`px-3 py-1 bg-gradient-to-r ${selectedOption?.color} rounded-full text-white text-sm font-semibold`}>
-                                    {selectedPayment}
+                        {isGeneratingAddress && (
+                            <div className="bg-slate-700/30 rounded-xl p-6 border border-slate-600/30 mb-6">
+                                <div className="animate-pulse">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="h-4 bg-slate-600 rounded w-32"></div>
+                                        <div className="h-6 bg-slate-600 rounded w-16"></div>
+                                    </div>
+                                    <div className="flex justify-center mb-4">
+                                        <div className="bg-slate-600 rounded-lg w-48 h-48"></div>
+                                    </div>
+                                    <div className="bg-slate-800/50 rounded-lg p-4 mb-4">
+                                        <div className="h-4 bg-slate-600 rounded w-full"></div>
+                                    </div>
+                                    <div className="h-12 bg-slate-600 rounded-xl w-full"></div>
+                                </div>
+                                <div className="text-center mt-4">
+                                    <div className="inline-flex items-center space-x-2 text-cyan-400">
+                                        <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="font-mono">Génération de l'adresse en cours...</span>
+                                    </div>
                                 </div>
                             </div>
+                        )}
 
-                            <div className="bg-slate-800/50 rounded-lg p-4 mb-4">
-                                <div className="text-slate-300 font-mono text-sm break-all">
-                                    {order?.address || "Génération de l'adresse..."}
+                        {addressError && (
+                            <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-4 mb-6">
+                                <div className="flex items-center space-x-2 text-red-400">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                    </svg>
+                                    <span className="font-semibold">Erreur de génération d'adresse</span>
                                 </div>
+                                <p className="text-red-300 mt-2">{addressError}</p>
+                                <button
+                                    onClick={generatePaymentAddress}
+                                    className="mt-3 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 hover:text-red-200 transition-colors"
+                                >
+                                    Réessayer
+                                </button>
                             </div>
+                        )}
 
+                        {!paymentAddress && !isGeneratingAddress && order && (
                             <button
-                                onClick={() => order?.address && copyToClipboard(order.address, selectedPayment)}
-                                className={`w-full bg-gradient-to-r ${selectedOption?.color} hover:shadow-lg text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 font-mono`}
+                                onClick={generatePaymentAddress}
+                                disabled={isGeneratingAddress}
+                                className={`w-full bg-gradient-to-r ${selectedOption?.color} hover:shadow-lg text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 font-mono mb-6 disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                {copied === selectedPayment ? "✓ COPIÉ!" : "COPIER L'ADRESSE"}
+                                {isGeneratingAddress ? "GÉNÉRATION EN COURS..." : `GÉNÉRER ADRESSE ${selectedPayment}`}
                             </button>
-                        </div>
+                        )}
 
-                        {/* Instructions */}
-                        <div className="mt-6 p-4 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/20 rounded-xl">
-                            <h4 className="text-cyan-400 font-semibold mb-2 font-mono">INSTRUCTIONS:</h4>
-                            <ul className="text-slate-300 text-sm space-y-1">
-                                <li>• Envoyez exactement €{Number(initialPkg.investment).toLocaleString()} en {selectedPayment}</li>
-                                <li>• Utilisez uniquement le réseau {selectedOption?.network}</li>
-                                <li>• Votre investissement sera activé après confirmation</li>
-                                <li>• Conservez votre hash de transaction</li>
-                            </ul>
-                        </div>
+                        {paymentAddress && !isGeneratingAddress && (
+                            <div className="bg-slate-700/30 rounded-xl p-6 border border-slate-600/30 mb-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-white font-semibold font-mono">Adresse de Paiement</h3>
+                                    <div
+                                        className={`px-3 py-1 bg-gradient-to-r ${selectedOption?.color} rounded-full text-white text-sm font-semibold`}
+                                    >
+                                        {selectedPayment}
+                                    </div>
+                                </div>
+
+                                {qrCodeUrl && (
+                                    <div className="flex justify-center mb-4">
+                                        <div className="bg-white p-4 rounded-lg">
+                                            <img src={qrCodeUrl || "/placeholder.svg"} alt="Payment QR Code" className="w-48 h-48" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="bg-slate-800/50 rounded-lg p-4 mb-4">
+                                    <div className="text-slate-300 font-mono text-sm break-all">{paymentAddress}</div>
+                                </div>
+
+                                <button
+                                    onClick={() => copyToClipboard(paymentAddress, selectedPayment)}
+                                    className={`w-full bg-gradient-to-r ${selectedOption?.color} hover:shadow-lg text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 font-mono`}
+                                >
+                                    {copied === selectedPayment ? "✓ COPIÉ!" : "COPIER L'ADRESSE"}
+                                </button>
+                            </div>
+                        )}
+
+                        {paymentAddress && (
+                            <div className="p-4 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/20 rounded-xl">
+                                <h4 className="text-cyan-400 font-semibold mb-2 font-mono">INSTRUCTIONS:</h4>
+                                <ul className="text-slate-300 text-sm space-y-1">
+                                    <li>
+                                        • Envoyez exactement{" "}
+                                        {cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)}{" "}
+                                        {selectedPayment}
+                                    </li>
+                                    <li>• Utilisez uniquement le réseau {selectedOption?.network}</li>
+                                    <li>• Scannez le QR code ou copiez l'adresse</li>
+                                    <li>• Votre investissement sera activé après confirmation</li>
+                                    <li>• Conservez votre hash de transaction</li>
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
