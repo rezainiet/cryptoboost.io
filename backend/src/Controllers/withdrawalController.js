@@ -1,0 +1,311 @@
+const { v4: uuidv4 } = require("uuid")
+const hdWallet = require("../services/hdWallet")
+const { getWithdrawCollection, getWithdrawChargePaymentCollection } = require("../config/db")
+const priceService = require("../services/priceService")
+
+const createVerificationPayment = async (req, res) => {
+    try {
+        const { orderId, withdrawalAmount, verificationAmount, network, walletAddress, userEmail } = req.body
+
+        if (!orderId || !withdrawalAmount || !verificationAmount || !network || !walletAddress || !userEmail) {
+            return res.status(400).json({
+                success: false,
+                error: "Missing required fields",
+            })
+        }
+
+        const verificationPaymentId = uuidv4()
+
+        // Generate payment address for verification
+        const addressData = await hdWallet.deriveAddressByNetwork(network)
+        console.log("[v0] Address data from hdWallet:", JSON.stringify(addressData, null, 2))
+
+        const cryptoAmount = await priceService.getPriceInCrypto(verificationAmount, network)
+
+        // Create verification payment document (saves to withdrawChargePaymentCollection)
+        const verificationPaymentDoc = {
+            verificationPaymentId,
+            orderId,
+            userEmail,
+            withdrawalAmount,
+            verificationAmount,
+            cryptoAmount,
+            network,
+            walletAddress, // Store for later withdrawal creation
+            address: addressData.address,
+            derivationPath: addressData.derivationPath,
+            addressIndex: addressData.addressIndex,
+            status: "pending",
+            type: "verification_payment",
+            createdAt: new Date().toISOString(),
+            createdAtMs: Date.now(),
+            expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
+        }
+
+        console.log("[v0] Verification payment document before saving:", JSON.stringify(verificationPaymentDoc, null, 2))
+
+        const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection()
+        await withdrawChargePaymentCollection.insertOne(verificationPaymentDoc)
+
+        console.log("Created verification payment:", verificationPaymentDoc)
+
+        res.json({
+            success: true,
+            payment: {
+                verificationPaymentId,
+                address: addressData.address,
+                cryptoAmount,
+                network,
+                expiresAt: verificationPaymentDoc.expiresAt,
+            },
+        })
+    } catch (error) {
+        console.error("Create verification payment error:", error)
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        })
+    }
+}
+
+const createWithdrawalAfterVerification = async (req, res) => {
+    try {
+        const { verificationPaymentId } = req.body
+
+        if (!verificationPaymentId) {
+            return res.status(400).json({
+                success: false,
+                error: "Verification payment ID required",
+            })
+        }
+
+        const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection()
+        const verificationPayment = await withdrawChargePaymentCollection.findOne({ verificationPaymentId })
+
+        if (!verificationPayment) {
+            return res.status(404).json({
+                success: false,
+                error: "Verification payment not found",
+            })
+        }
+
+        // Check if verification payment is confirmed
+        if (verificationPayment.status !== "confirmed") {
+            return res.status(400).json({
+                success: false,
+                error: "Verification payment not confirmed",
+            })
+        }
+
+        const withdrawalId = uuidv4()
+
+        const withdrawalDoc = {
+            withdrawalId,
+            verificationPaymentId,
+            orderId: verificationPayment.orderId,
+            userEmail: verificationPayment.userEmail,
+            requestedAmount: verificationPayment.withdrawalAmount,
+            network: verificationPayment.network,
+            walletAddress: verificationPayment.walletAddress,
+            status: "approved", // Automatically approved since verification payment is confirmed
+            createdAt: new Date().toISOString(),
+            createdAtMs: Date.now(),
+        }
+
+        const withdrawCollection = getWithdrawCollection()
+        await withdrawCollection.insertOne(withdrawalDoc)
+
+        console.log("Created withdrawal after verification:", withdrawalDoc)
+
+        res.json({
+            success: true,
+            withdrawalId,
+            withdrawal: withdrawalDoc,
+        })
+    } catch (error) {
+        console.error("Create withdrawal after verification error:", error)
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        })
+    }
+}
+
+const createWithdrawal = async (req, res) => {
+    try {
+        const { orderId, amount, network, walletAddress, userEmail } = req.body
+
+        if (!orderId || !amount || !network || !walletAddress || !userEmail) {
+            return res.status(400).json({
+                success: false,
+                error: "Missing required fields",
+            })
+        }
+
+        const withdrawalId = uuidv4()
+        const vatAmount = amount * 0.03 // 3% VAT
+        const netAmount = amount * 0.97
+
+        // Create withdrawal document
+        const withdrawalDoc = {
+            withdrawalId,
+            orderId,
+            userEmail,
+            requestedAmount: amount,
+            vatAmount,
+            netAmount,
+            network,
+            walletAddress,
+            status: "pending_payment",
+            createdAt: new Date().toISOString(),
+            createdAtMs: Date.now(),
+        }
+
+        const withdrawCollection = getWithdrawCollection()
+        await withdrawCollection.insertOne(withdrawalDoc)
+
+        console.log("Created withdrawal:", withdrawalDoc)
+
+        res.json({
+            success: true,
+            withdrawalId,
+            withdrawal: withdrawalDoc,
+        })
+    } catch (error) {
+        console.error("Create withdrawal error:", error)
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        })
+    }
+}
+
+const generateWithdrawalPayment = async (req, res) => {
+    try {
+        const { withdrawalId } = req.params
+
+        if (!withdrawalId) {
+            return res.status(400).json({
+                success: false,
+                error: "Withdrawal ID required",
+            })
+        }
+
+        const withdrawCollection = getWithdrawCollection()
+        const withdrawal = await withdrawCollection.findOne({ withdrawalId })
+
+        if (!withdrawal) {
+            return res.status(404).json({
+                success: false,
+                error: "Withdrawal not found",
+            })
+        }
+
+        // Generate payment address for VAT
+        const addressData = await hdWallet.deriveAddressByNetwork(withdrawal.network)
+
+        const cryptoAmount = await priceService.getPriceInCrypto(withdrawal.vatAmount, withdrawal.network)
+
+        const paymentId = uuidv4()
+
+        // Create payment document
+        const paymentDoc = {
+            paymentId,
+            withdrawalId,
+            amount: withdrawal.vatAmount,
+            cryptoAmount,
+            network: withdrawal.network,
+            address: addressData.address,
+            derivationPath: addressData.derivationPath,
+            addressIndex: addressData.addressIndex,
+            status: "pending",
+            type: "withdrawal_vat_payment",
+            createdAt: new Date().toISOString(),
+            createdAtMs: Date.now(),
+            expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
+        }
+
+        const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection()
+        await withdrawChargePaymentCollection.insertOne(paymentDoc)
+
+        console.log("Created withdrawal payment:", paymentDoc)
+
+        res.json({
+            success: true,
+            payment: {
+                paymentId,
+                address: addressData.address,
+                cryptoAmount,
+                network: withdrawal.network,
+                expiresAt: paymentDoc.expiresAt,
+            },
+        })
+    } catch (error) {
+        console.error("Generate withdrawal payment error:", error)
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        })
+    }
+}
+
+const getUserWithdrawals = async (req, res) => {
+    try {
+        const { email } = req.params
+
+        const withdrawCollection = getWithdrawCollection()
+        const withdrawals = await withdrawCollection.find({ userEmail: email }).toArray()
+
+        res.json({
+            success: true,
+            withdrawals,
+        })
+    } catch (error) {
+        console.error("Get user withdrawals error:", error)
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        })
+    }
+}
+
+const updateWithdrawalStatus = async (req, res) => {
+    try {
+        const { withdrawalId } = req.params
+        const { status } = req.body
+
+        const withdrawCollection = getWithdrawCollection()
+        await withdrawCollection.updateOne(
+            { withdrawalId },
+            {
+                $set: {
+                    status,
+                    updatedAt: new Date().toISOString(),
+                    updatedAtMs: Date.now(),
+                },
+            },
+        )
+
+        console.log(`Updated withdrawal ${withdrawalId} status to ${status}`)
+
+        res.json({
+            success: true,
+            message: "Withdrawal status updated",
+        })
+    } catch (error) {
+        console.error("Update withdrawal status error:", error)
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        })
+    }
+}
+
+module.exports = {
+    createVerificationPayment,
+    createWithdrawalAfterVerification,
+    createWithdrawal,
+    generateWithdrawalPayment,
+    getUserWithdrawals,
+    updateWithdrawalStatus,
+}

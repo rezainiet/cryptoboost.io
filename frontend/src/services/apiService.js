@@ -213,6 +213,33 @@ class ApiService {
             body: JSON.stringify({ network }),
         })
     }
+
+    async createVerificationPayment(verificationData) {
+        return this.makeRequest("/withdrawals/create-verification-payment", {
+            method: "POST",
+            body: JSON.stringify(verificationData),
+        })
+    }
+
+    async createWithdrawalAfterVerification(verificationPaymentId) {
+        return this.makeRequest("/withdrawals/create-after-verification", {
+            method: "POST",
+            body: JSON.stringify({ verificationPaymentId }),
+        })
+    }
+
+    // Get user withdrawals
+    async getUserWithdrawals(email, page = 1, limit = 10) {
+        return this.makeRequest(`/withdrawals/user/${email}?page=${page}&limit=${limit}`)
+    }
+
+    // Update withdrawal status
+    async updateWithdrawalStatus(withdrawalId, status) {
+        return this.makeRequest(`/withdrawals/${withdrawalId}/status`, {
+            method: "PUT",
+            body: JSON.stringify({ status }),
+        })
+    }
 }
 
 const apiService = new ApiService()

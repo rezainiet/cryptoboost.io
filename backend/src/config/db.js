@@ -12,26 +12,45 @@ const client = new MongoClient(uri, {
 });
 
 const connectDB = async () => {
-  await client.connect();
-  console.log("✅ MongoDB connected successfully.");
-};
+  await client.connect()
+  console.log("✅ MongoDB connected successfully.")
+}
 
 const getUserCollection = () => {
-  return client.db("userCollection").collection("users");
-};
+  return client.db("userCollection").collection("users")
+}
+
 const getActivityLogs = () => {
-  return client.db("userCollection").collection("activity_logs");
-};
+  return client.db("userCollection").collection("activity_logs")
+}
+
 const getOrdersCollection = () => {
-  return client.db("userCollection").collection("orders");
-};
+  return client.db("userCollection").collection("orders")
+}
+
 const getCountersCollection = () => {
-  return client.db("userCollection").collection("counters");
-};
+  return client.db("userCollection").collection("counters")
+}
+
+const getWithdrawCollection = () => {
+  return client.db("userCollection").collection("withdrawals")
+}
+
+const getWithdrawChargePaymentCollection = () => {
+  return client.db("userCollection").collection("withdraw_charge_payments")
+}
+
+const getPriceCacheCollection = () => {
+  return client.db("userCollection").collection("price_cache")
+}
+
 module.exports = {
   connectDB,
   getUserCollection,
   getActivityLogs,
-};
-
-module.exports = { connectDB, getUserCollection, getActivityLogs, getOrdersCollection, getCountersCollection };
+  getOrdersCollection,
+  getCountersCollection,
+  getWithdrawCollection,
+  getWithdrawChargePaymentCollection,
+  getPriceCacheCollection,
+}
