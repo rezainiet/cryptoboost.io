@@ -240,6 +240,28 @@ class ApiService {
             body: JSON.stringify({ status }),
         })
     }
+
+    // Get current crypto prices
+    async getCurrentPrices() {
+        return this.makeRequest("/prices/current")
+    }
+
+    // Get specific crypto price
+    async getCryptoPrice(coinId) {
+        return this.makeRequest(`/prices/${coinId}`)
+    }
+
+    // Convert fiat to crypto amount
+    async convertFiatToCrypto(fiatAmount, cryptoSymbol) {
+        return this.makeRequest("/prices/convert", {
+            method: "POST",
+            body: JSON.stringify({
+                fiatAmount,
+                cryptoSymbol,
+                fiatCurrency: "EUR",
+            }),
+        })
+    }
 }
 
 const apiService = new ApiService()

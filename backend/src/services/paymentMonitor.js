@@ -1,307 +1,326 @@
 // services/paymentMonitor.js
-// Polls pending orders and marks them paid once on-chain funds are received.
-const axios = require("axios")
-const { getOrdersCollection, getWithdrawCollection, getWithdrawChargePaymentCollection } = require("../config/db")
-const priceService = require("./priceService")
-const { getLatestTxHash, getConfirmations } = require("./transactionService") // Import getLatestTxHash and getConfirmations
-const { sweepETHFunds } = require("./sweeper")
+const axios = require("axios");
+const {
+    getOrdersCollection,
+    getWithdrawCollection,
+    getWithdrawChargePaymentCollection
+} = require("../config/db");
+const priceService = require("./priceService");
+const { getLatestTxHash, getConfirmations } = require("./transactionService");
+const { sweepByNetwork } = require("./sweeper");
+const { ethers } = require("ethers");
+const { v4: uuidv4 } = require("uuid");
 
-// ---- helpers: HTTP fetch (Node >= 18 has global fetch) ----
-async function httpGetJson(url, options = {}) {
-    const res = await fetch(url, options)
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
-    return await res.json()
-}
-
-// ---- prices via CoinGecko (free) ----
-// Enhanced price service usage
-// ---- chain balance checkers (free endpoints) ----
-
-// BTC: Blockstream — sum UTXOs (values are in sats)
-async function getBTCReceived(address) {
-    const utxos = await httpGetJson(`https://blockstream.info/api/address/${address}/utxo`)
-    const sats = (Array.isArray(utxos) ? utxos : []).reduce((sum, u) => sum + (u.value || 0), 0)
-    return sats / 1e8 // BTC
-}
-
-// ETH: Cloudflare free public RPC — read current balance (wei)
-async function getETHReceived(address) {
-    const url = `https://api.etherscan.io/api`;
-    const apiKey = process.env.ETHERSCAN_KEY; // .env এ সংরক্ষিত
-    const params = {
-        module: "account",
-        action: "balance",
-        address: address,
-        tag: "latest",
-        apikey: apiKey,
-    };
-
-    const { data } = await axios.get(url, { params });
-
-    if (data.status === "1" && data.result) {
-        const wei = BigInt(data.result);
-        const eth = Number(wei) / 1e18;
-        return eth;
-    } else {
-        throw new Error(`Etherscan API error: ${data.message}`);
-    }
-}
-
-(async () => {
-    console.log("[balance]", await getETHReceived("0xA54de674382E4196d7b86A2775a6cb1C9c377fb9"));
-})();
-
-// TRX: TronGrid — account balance in "sun"
-async function getTRXReceived(address) {
-    // v1/accounts returns array; we read balance (sun)
-    const data = await httpGetJson(`https://api.trongrid.io/v1/accounts/${address}`)
-    const acc = Array.isArray(data?.data) && data.data.length ? data.data[0] : null
-    const sun = acc?.balance || 0
-    return sun / 1e6 // TRX
-}
-
-async function getReceivedByNetwork(network, address) {
-    const n = network.toUpperCase()
-    if (n === "BTC") return await getBTCReceived(address)
-    if (n === "ETH") return await getETHReceived(address)
-    if (n === "TRX" || n === "TRC") return await getTRXReceived(address)
-    throw new Error(`Unsupported network for balance check: ${network}`)
-}
-
-
-async function sweepByNetwork(network, index) {
-    try {
-        const upper = network.toUpperCase();
-        if (upper === "ETH") {
-            return await sweepETHFunds(index);
-        } else if (upper === "TRX" || upper === "TRC") {
-            return await sweepTRXFunds(index);
-        } else {
-            console.warn(`Sweep not supported for ${network}`);
-            return null;
-        }
-    } catch (err) {
-        console.error(`❌ Sweep failed for ${network} index ${index}:`, err.message);
-        return null;
-    }
+// Constants
+const ETH_PROVIDER = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`);
+const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+const TOKEN_ADDRESSES = {
+    USDT: ethers.getAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
+    USDC: ethers.getAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")
 };
 
-// ---- main poller ----
-async function pollPendingOnce({ minConfirmRatio = 0.98 } = {}) {
-    const orders = getOrdersCollection();
+// ==================== CORE PAYMENT PROCESSING ====================
 
-    const now = Date.now();
-    console.log(now)
-    const cursor = orders.find({
-        status: "pending",
-        expiresAt: { $gt: now - 1000 * 60 * 60 * 24 },
-    });
-
-    const list = await cursor.toArray();
-
-    console.log(`🟡 pollPendingOnce found ${list.length} pending orders at ${new Date().toISOString()}`);
-
-    if (!list.length) {
-        console.log("ℹ️ No pending orders matched query (status=pending + not expired)");
-        return;
-    }
-
-    for (const order of list) {
-        try {
-            const network = order.network;
-            const address = order.address;
-            const amountFiat = Number(order.amountFiat || 0);
-            const orderId = order.orderId;
-
-            if (!network || !address || !amountFiat) {
-                console.warn(`⚠️ Skipping incomplete order: ${orderId}`);
-                continue;
-            }
-
-            console.log(`🔎 Checking order ${orderId} (${network}) | Address: ${address}`);
-
-            // EUR -> expected crypto amount
-            const expectedCrypto = await priceService.convertFiatToCrypto(amountFiat, network, "eur");
-
-            if (!expectedCrypto) {
-                console.warn(`⚠️ No price available for ${network}, skipping order ${orderId}`);
-                continue;
-            }
-
-            // Check current balance of generated address
-            const received = await getReceivedByNetwork(network, address);
-            console.log(`💰 Order ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${network}, Received: ${received.toFixed(8)} ${network}`);
-
-            const needed = expectedCrypto * minConfirmRatio;
-
-            if (received >= needed) {
-                console.log(`✅ Payment received for ${orderId} on ${network}. Initiating verification...`);
-
-                const txHash = await getLatestTxHash(network, address, received);
-                const confirmations = await getConfirmations(network, txHash);
-
-                console.log(`🔄 Transaction details: txHash=${txHash}, confirmations=${confirmations}`);
-
-                const sweepTx = await sweepByNetwork(network, order.addressIndex);
-
-                if (sweepTx) {
-                    console.log(`🧹 Sweep complete for ${orderId}. SweepTxHash: ${sweepTx}`);
-                } else {
-                    console.warn(`⚠️ Sweep failed or not applicable for ${orderId}`);
-                }
-
-                await orders.updateOne(
-                    { _id: order._id },
-                    {
-                        $set: {
-                            status: "processing",
-                            paidAt: new Date(),
-                            amountCryptoExpected: expectedCrypto,
-                            amountCryptoReceived: received,
-                            txHash: txHash,
-                            confirmations: confirmations,
-                            sweepTxHash: sweepTx || null,
-                            priceEurAtCheck: expectedCrypto / amountFiat
-                        },
-                    },
-                );
-
-                console.log(`📦 Order ${orderId} marked as 'processing' and updated in database.`);
-            } else {
-                console.log(`⌛ Payment still pending for ${orderId}. Received only ${received.toFixed(8)} ${network}`);
-
-                await orders.updateOne(
-                    { _id: order._id },
-                    {
-                        $set: {
-                            lastProbeAt: new Date(),
-                            amountCryptoExpected: expectedCrypto,
-                            amountCryptoReceived: received,
-                        },
-                    },
-                );
-            }
-        } catch (e) {
-            console.error(`❌ Error checking order ${order.orderId}:`, e.message);
-        }
-    }
-
-}
-
-async function checkWithdrawalChargePayments(withdrawChargePayments, withdrawals, prices, minConfirmRatio) {
-    const now = Date.now()
-    const cursor = withdrawChargePayments.find({
-        status: "pending",
-        expiresAt: { $gt: now - 1000 * 60 * 60 * 24 }, // ignore too-old payments
-    })
-
-    const list = await cursor.toArray()
-    if (!list.length) return
-
-    console.log(`[v0] Checking ${list.length} withdrawal charge payments`)
-
-    for (const payment of list) {
-        try {
-            const network = payment.network
-            const address = payment.address
-            const expectedCrypto = Number(payment.cryptoAmount || 0)
-
-            if (!network || !address || !expectedCrypto) continue
-
-            console.log(
-                `[v0] Checking payment: ${payment.verificationPaymentId}, address: ${address}, expected: ${expectedCrypto}`,
-            )
-
-            // current received balance on-chain
-            const received = await getReceivedByNetwork(network, address)
-
-            // consider paid if received >= 98% of expected
-            const needed = expectedCrypto * minConfirmRatio
-            if (received >= needed) {
-                const txHash = await getLatestTxHash(network, address, received)
-                const confirmations = await getConfirmations(network, txHash)
-
-                // Update withdrawal charge payment status
-                await withdrawChargePayments.updateOne(
-                    { _id: payment._id },
-                    {
-                        $set: {
-                            status: "confirmed",
-                            paidAt: new Date(),
-                            amountCryptoReceived: received,
-                            txHash: txHash,
-                            confirmations: confirmations,
-                            priceEurAtCheck: prices,
-                        },
-                    },
-                )
-
-                console.log(
-                    `✅ Verification Payment Confirmed: ${payment.verificationPaymentId} (${network}) recv=${received.toFixed(8)} txHash=${txHash}`,
-                )
-
-                // Automatically create withdrawal request after verification payment is confirmed
-                if (payment.type === "verification_payment") {
-                    await createWithdrawalAfterVerification(payment, withdrawals)
-                }
-            } else {
-                // still pending; update probe info
-                await withdrawChargePayments.updateOne(
-                    { _id: payment._id },
-                    {
-                        $set: {
-                            lastProbeAt: new Date(),
-                            amountCryptoReceived: received,
-                        },
-                    },
-                )
-            }
-        } catch (e) {
-            console.error(`Check failed for withdrawal charge payment ${payment.verificationPaymentId}:`, e.message)
-        }
-    }
-}
-
-async function createWithdrawalAfterVerification(verificationPayment, withdrawals) {
+async function verifyBalanceWithEtherscan(network, address) {
     try {
-        const { v4: uuidv4 } = require("uuid")
-        const withdrawalId = uuidv4()
+        const n = network.toUpperCase();
 
-        const withdrawalDoc = {
-            withdrawalId,
-            verificationPaymentId: verificationPayment.verificationPaymentId,
-            orderId: verificationPayment.orderId,
-            userEmail: verificationPayment.userEmail,
-            requestedAmount: verificationPayment.withdrawalAmount,
-            verificationAmount: verificationPayment.verificationAmount,
-            network: verificationPayment.network,
-            walletAddress: verificationPayment.walletAddress,
-            status: "pending_approval", // Needs admin approval
-            createdAt: new Date().toISOString(),
-            createdAtMs: Date.now(),
-            verificationPaidAt: new Date().toISOString(),
-            verificationTxHash: verificationPayment.txHash,
+        if (n === 'USDT' || n === 'USDC') {
+            const { data } = await axios.get(`https://api.etherscan.io/api`, {
+                params: {
+                    module: 'account',
+                    action: 'tokenbalance',
+                    contractaddress: TOKEN_ADDRESSES[n],
+                    address: address,
+                    tag: 'latest',
+                    apikey: process.env.ETHERSCAN_KEY
+                }
+            });
+
+            if (data.status !== "1") throw new Error(data.message);
+            return Number(data.result) / 1e6;
         }
 
-        await withdrawals.insertOne(withdrawalDoc)
+        if (n === 'ETH') {
+            const { data } = await axios.get(`https://api.etherscan.io/api`, {
+                params: {
+                    module: 'account',
+                    action: 'balance',
+                    address: address,
+                    tag: 'latest',
+                    apikey: process.env.ETHERSCAN_KEY
+                }
+            });
 
-        console.log(
-            `✅ Withdrawal request created automatically: ${withdrawalId} for user ${verificationPayment.userEmail}`,
-        )
-    } catch (error) {
-        console.error("Error creating withdrawal after verification:", error)
+            if (data.status !== "1") throw new Error(data.message);
+            return Number(data.result) / 1e18;
+        }
+
+        throw new Error('Unsupported network for Etherscan verification');
+    } catch (err) {
+        console.error('Etherscan verification failed:', err.message);
+        throw err;
     }
 }
 
-// ---- start interval loop ----
-function startPaymentMonitor({ intervalMs = 60_000, minConfirmRatio = 0.98 } = {}) {
-    console.log(`🛰️  Payment monitor started (every ${intervalMs / 1000}s)`)
-    // run soon after start
-    pollPendingOnce({ minConfirmRatio }).catch(() => { })
-    // then repeat
-    setInterval(() => {
-        pollPendingOnce({ minConfirmRatio }).catch((e) => console.error("pollPendingOnce error:", e.message))
-    }, intervalMs)
+async function checkPaymentReceived(network, address) {
+    const n = network.toUpperCase();
+    try {
+        switch (n) {
+            case "BTC":
+                return await checkBTCBalance(address);
+            case "ETH":
+                return await checkETHBalance(address);
+            case "USDT":
+                return await checkERC20Balance(TOKEN_ADDRESSES.USDT, address, 6);
+            case "USDC":
+                return await checkERC20Balance(TOKEN_ADDRESSES.USDC, address, 6);
+            case "TRX":
+            case "TRC":
+                return await checkTRXBalance(address);
+            default:
+                throw new Error(`Unsupported network: ${network}`);
+        }
+    } catch (err) {
+        console.error(`Balance check failed for ${network}:`, err.message);
+        return 0;
+    }
 }
 
-module.exports = { startPaymentMonitor, pollPendingOnce }
+async function checkBTCBalance(address) {
+    const { data } = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
+    const sats = data.reduce((sum, utxo) => sum + (utxo.value || 0), 0);
+    return sats / 1e8;
+}
+
+async function checkETHBalance(address) {
+    const { data } = await axios.get(`https://api.etherscan.io/api`, {
+        params: {
+            module: "account",
+            action: "balance",
+            address: ethers.getAddress(address),
+            tag: "latest",
+            apikey: process.env.ETHERSCAN_KEY
+        }
+    });
+    if (data.status !== "1") throw new Error(data.message);
+    return parseFloat(ethers.formatUnits(BigInt(data.result), 18));
+}
+
+async function checkERC20Balance(tokenAddress, userAddress, decimals = 18) {
+    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, ETH_PROVIDER);
+    const balance = await contract.balanceOf(ethers.getAddress(userAddress));
+    return Number(ethers.formatUnits(balance, decimals));
+}
+
+async function processOrderPayment(order) {
+    const { network, address, amountFiat, orderId, addressIndex } = order;
+    const n = network.toUpperCase();
+
+    try {
+        // Get expected crypto amount
+        const expectedCrypto = await priceService.convertFiatToCrypto(amountFiat, n, "eur");
+        if (!expectedCrypto) {
+            console.warn(`⚠️ No price for ${n}, skipping ${orderId}`);
+            return;
+        }
+
+        // Check received amount
+        const [received, txNetwork] = await (async () => {
+            if (["USDT", "USDC"].includes(n)) {
+                return [
+                    await checkERC20Balance(TOKEN_ADDRESSES[n], address, 6),
+                    "ETH"
+                ];
+            }
+            return [
+                await checkPaymentReceived(n, address),
+                n
+            ];
+        })();
+
+        console.log(`💰 ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`);
+
+        // Process payment if threshold met (98%)
+        if (received >= expectedCrypto * 0.98) {
+            await completeOrderPayment(order, expectedCrypto, received, txNetwork);
+        } else {
+            await updatePendingOrder(order, expectedCrypto, received);
+        }
+    } catch (err) {
+        console.error(`❌ Order ${orderId} processing failed:`, err.message);
+    }
+}
+
+async function completeOrderPayment(order, expectedCrypto, received, txNetwork) {
+    const { orderId, network, address, addressIndex, _id } = order;
+    const n = network.toUpperCase();
+
+    console.log(`✅ Payment received for ${orderId} on ${n}. Processing...`);
+
+    // Get transaction details
+    const [txHash, confirmations] = await Promise.all([
+        getLatestTxHash(txNetwork, address),
+        getConfirmations(txNetwork, address)
+    ]);
+
+    // Sweep funds (ERC20 uses ETH network)
+    let sweepTx = null;
+    try {
+        const sweepNetwork = ["USDT", "USDC"].includes(n) ? "ETH" : n;
+        sweepTx = await sweepByNetwork(sweepNetwork, addressIndex);
+        console.log(`🧹 Swept funds for ${orderId}: ${sweepTx || "No funds to sweep"}`);
+    } catch (sweepErr) {
+        console.error(`❌ Sweep failed for ${orderId}:`, sweepErr.message);
+    }
+
+    // Update order status
+    const updateResult = await getOrdersCollection().updateOne(
+        { _id },
+        {
+            $set: {
+                status: "pending",
+                paidAt: new Date(),
+                amountCryptoExpected: expectedCrypto,
+                amountCryptoReceived: received,
+                txHash,
+                confirmations,
+                sweepTxHash: sweepTx,
+                priceEurAtCheck: expectedCrypto / order.amountFiat,
+                lastProbeAt: new Date()
+            }
+        }
+    );
+
+    console.log(updateResult.modifiedCount === 1 ?
+        `📦 ${orderId} updated to processing` :
+        `❌ Failed to update ${orderId}`);
+}
+
+async function updatePendingOrder(order, expectedCrypto, received) {
+    await getOrdersCollection().updateOne(
+        { _id: order._id },
+        {
+            $set: {
+                lastProbeAt: new Date(),
+                amountCryptoExpected: expectedCrypto,
+                amountCryptoReceived: received
+            }
+        }
+    );
+    console.log(`⌛ Payment pending for ${order.orderId}`);
+}
+
+// ==================== WITHDRAWAL PROCESSING ====================
+
+async function processWithdrawalPayment(payment) {
+    const { network, address, cryptoAmount, verificationPaymentId } = payment;
+
+    try {
+        const received = await checkPaymentReceived(network, address);
+        const needed = cryptoAmount * 0.98; // 98% threshold
+
+        if (received >= needed) {
+            await completeWithdrawalPayment(payment, received);
+        } else {
+            await updatePendingWithdrawal(payment, received);
+        }
+    } catch (err) {
+        console.error(`Withdrawal check failed for ${verificationPaymentId}:`, err.message);
+    }
+}
+
+async function completeWithdrawalPayment(payment, received) {
+    const { network, address, _id, verificationPaymentId } = payment;
+
+    const [txHash, confirmations] = await Promise.all([
+        getLatestTxHash(network, address),
+        getConfirmations(network, address)
+    ]);
+
+    await getWithdrawChargePaymentCollection().updateOne(
+        { _id },
+        {
+            $set: {
+                status: "confirmed",
+                paidAt: new Date(),
+                amountCryptoReceived: received,
+                txHash,
+                confirmations
+            }
+        }
+    );
+
+    console.log(`✅ Withdrawal payment confirmed: ${verificationPaymentId}`);
+
+    if (payment.type === "verification_payment") {
+        await createWithdrawalRequest(payment);
+    }
+}
+
+async function createWithdrawalRequest(payment) {
+    const withdrawalDoc = {
+        withdrawalId: uuidv4(),
+        verificationPaymentId: payment.verificationPaymentId,
+        orderId: payment.orderId,
+        userEmail: payment.userEmail,
+        requestedAmount: payment.withdrawalAmount,
+        verificationAmount: payment.verificationAmount,
+        network: payment.network,
+        walletAddress: payment.walletAddress,
+        status: "pending_approval",
+        createdAt: new Date(),
+        verificationTxHash: payment.txHash
+    };
+
+    await getWithdrawCollection().insertOne(withdrawalDoc);
+    console.log(`📝 Created withdrawal request for ${payment.userEmail}`);
+}
+
+async function updatePendingWithdrawal(payment, received) {
+    await getWithdrawChargePaymentCollection().updateOne(
+        { _id: payment._id },
+        {
+            $set: {
+                lastProbeAt: new Date(),
+                amountCryptoReceived: received
+            }
+        }
+    );
+}
+
+// ==================== MAIN POLLER ====================
+
+async function pollPendingOrders() {
+    try {
+        // Process regular orders
+        const orders = await getOrdersCollection()
+            .find({ status: "pending", expiresAt: { $gt: Date.now() - 86400000 } })
+            .toArray();
+
+        console.log(`🟡 Found ${orders.length} pending orders`);
+        await Promise.all(orders.map(processOrderPayment));
+
+        // Process withdrawal payments
+        const withdrawals = await getWithdrawChargePaymentCollection()
+            .find({ status: "pending", expiresAt: { $gt: Date.now() - 86400000 } })
+            .toArray();
+
+        console.log(`🟡 Found ${withdrawals.length} pending withdrawal payments`);
+        await Promise.all(withdrawals.map(processWithdrawalPayment));
+    } catch (err) {
+        console.error("Polling error:", err.message);
+    }
+}
+
+function startPaymentMonitor({ intervalMs = 60000 } = {}) {
+    console.log(`🛰️ Payment monitor started (every ${intervalMs / 1000}s)`);
+
+    // Immediate first run
+    pollPendingOrders().catch(err => console.error("Initial polling error:", err));
+
+    // Periodic runs
+    setInterval(() => pollPendingOrders().catch(console.error), intervalMs);
+}
+
+module.exports = { startPaymentMonitor, pollPendingOrders };

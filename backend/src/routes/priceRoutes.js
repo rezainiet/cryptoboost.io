@@ -7,7 +7,7 @@ router.get("/current", async (req, res) => {
         const { fiat = "eur" } = req.query
 
         // Get prices for all supported cryptocurrencies
-        const symbols = ["bitcoin", "ethereum", "tron"]
+        const symbols = ["bitcoin", "ethereum", "tether", "usd-coin"]  // added ERC20 tokens
         const prices = await priceService.getMultiplePrices(symbols, fiat)
 
         res.json({
@@ -16,7 +16,8 @@ router.get("/current", async (req, res) => {
             prices: {
                 BTC: prices.bitcoin,
                 ETH: prices.ethereum,
-                TRC: prices.tron,
+                USDT: prices.tether,   // added
+                USDC: prices["usd-coin"], // added
             },
             timestamp: Date.now(),
         })
@@ -26,7 +27,7 @@ router.get("/current", async (req, res) => {
             error: error.message,
         })
     }
-})
+});
 
 router.get("/price/:symbol", async (req, res) => {
     try {

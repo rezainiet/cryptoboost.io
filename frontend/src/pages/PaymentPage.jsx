@@ -15,7 +15,7 @@ const paymentOptions = [
         color: "from-orange-400 to-yellow-500",
         glowColor: "orange-400",
         network: "Bitcoin Network",
-        rate: 45000, // Example rate: 1 BTC = $45,000
+        coinId: "bitcoin",
     },
     {
         id: "ETH",
@@ -24,18 +24,37 @@ const paymentOptions = [
         color: "from-blue-400 to-purple-500",
         glowColor: "blue-400",
         network: "Ethereum Network",
-        rate: 2500, // Example rate: 1 ETH = $2,500
+        coinId: "ethereum",
     },
     {
-        id: "TRC",
-        name: "TRON (TRC20)",
-        symbol: "◎",
-        color: "from-red-400 to-pink-500",
-        glowColor: "red-400",
-        network: "TRON Network",
-        rate: 0.08, // Example rate: 1 TRX = $0.08
+        id: "USDT",
+        name: "Tether (ERC20)",
+        symbol: "₮",
+        color: "from-green-400 to-teal-500",
+        glowColor: "green-400",
+        network: "Ethereum Network",
+        coinId: "tether",
     },
+    {
+        id: "USDC",
+        name: "USD Coin (ERC20)",
+        symbol: "$",
+        color: "from-blue-400 to-sky-500",
+        glowColor: "blue-400",
+        network: "Ethereum Network",
+        coinId: "usd-coin",
+    },
+    {
+        id: "SOL",
+        name: "Solana",
+        symbol: "◎",
+        color: "from-green-400 to-purple-500",
+        glowColor: "green-400",
+        network: "Solana Network",
+        coinId: "solana",
+    }
 ]
+
 
 const PaymentPage = () => {
     const [user] = useAuthState(auth)
@@ -53,6 +72,8 @@ const PaymentPage = () => {
     const [cryptoAmount, setCryptoAmount] = useState(0)
     const [totalWithFees, setTotalWithFees] = useState(0)
     const [addressError, setAddressError] = useState(null)
+    const [cryptoPrices, setCryptoPrices] = useState({}) // Added state for real-time prices
+    const [loadingPrices, setLoadingPrices] = useState(false) // Added loading state for prices
 
     const isCreatingOrder = useRef(false)
 
@@ -61,16 +82,16 @@ const PaymentPage = () => {
 
         const baseAmount = Number(initialPkg.investment)
         const vatRate = 0.05 // 5% VAT
-        const processingFee = 10 // €10 processing fee
-        const total = baseAmount + baseAmount * vatRate + processingFee
+        const total = baseAmount + baseAmount * vatRate // Removed processing fee
         setTotalWithFees(total)
 
+        // Calculate crypto amount using real price
         const selectedOption = paymentOptions.find((p) => p.id === selectedPayment)
-        if (selectedOption) {
-            const cryptoValue = total / selectedOption.rate
+        if (selectedOption && cryptoPrices[selectedOption.coinId]) {
+            const cryptoValue = total / cryptoPrices[selectedOption.coinId]
             setCryptoAmount(cryptoValue)
         }
-    }, [initialPkg, selectedPayment])
+    }, [initialPkg, selectedPayment, cryptoPrices])
 
     useEffect(() => {
         if (!order?.expiresAt) return
@@ -183,19 +204,63 @@ const PaymentPage = () => {
     }
 
     const generateQRCode = (address) => {
-        if (!address) return
-        const selectedOption = paymentOptions.find((p) => p.id === selectedPayment)
-        const qrData = `${selectedPayment.toLowerCase()}:${address}?amount=${cryptoAmount}`
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`
-        setQrCodeUrl(qrUrl)
-        console.log("[v0] QR code generated for address:", address)
+        if (!address) return;
+        const selectedOption = paymentOptions.find((p) => p.id === selectedPayment);
+
+        let qrData = "";
+        if (selectedPayment === "USDT" || selectedPayment === "USDC") {
+            qrData = `${selectedPayment}:${paymentAddress}?amount=${cryptoAmount}`;
+        } else if (selectedPayment === "SOL") {
+            qrData = `sol:${paymentAddress}?amount=${cryptoAmount}`;
+        } else {
+            qrData = `${selectedPayment.toLowerCase()}:${paymentAddress}?amount=${cryptoAmount}`;
+        }
+
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+        setQrCodeUrl(qrUrl);
+    };
+
+    const fetchCryptoPrices = async () => {
+        if (loadingPrices) return
+
+        setLoadingPrices(true)
+        try {
+            const response = await fetch(`${API_BASE}/prices/current`)
+            if (response.ok) {
+                const data = await response.json()
+                setCryptoPrices(data.prices)
+                console.log("[v0] Fetched crypto prices:", data.prices)
+            } else {
+                console.error("[v0] Failed to fetch crypto prices")
+            }
+        } catch (error) {
+            console.error("[v0] Error fetching crypto prices:", error)
+        } finally {
+            setLoadingPrices(false)
+        }
     }
+
+    useEffect(() => {
+        fetchCryptoPrices()
+    }, [])
 
     const handleNetworkChange = (networkId) => {
         setSelectedPayment(networkId)
         setPaymentAddress(null)
         setQrCodeUrl(null)
         setAddressError(null)
+
+        if (initialPkg && cryptoPrices) {
+            const baseAmount = Number(initialPkg.investment)
+            const vatRate = 0.05
+            const total = baseAmount + baseAmount * vatRate
+
+            const selectedOption = paymentOptions.find((p) => p.id === networkId)
+            if (selectedOption && cryptoPrices[selectedOption.coinId]) {
+                const cryptoValue = total / cryptoPrices[selectedOption.coinId]
+                setCryptoAmount(cryptoValue)
+            }
+        }
     }
 
     const formatTime = (seconds) => {
@@ -281,10 +346,6 @@ const PaymentPage = () => {
                                 <span className="text-white">€{(Number(initialPkg.investment) * 0.05).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between items-center p-4 bg-slate-700/30 rounded-lg">
-                                <span className="text-slate-400 font-mono">Frais de traitement</span>
-                                <span className="text-white">€10.00</span>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-slate-700/30 rounded-lg">
                                 <span className="text-slate-400 font-mono">Retour Estimé</span>
                                 <span className="text-lime-400 font-bold text-lg">€{Number(initialPkg.returns).toLocaleString()}</span>
                             </div>
@@ -334,8 +395,14 @@ const PaymentPage = () => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-slate-400 text-sm">Rate</div>
-                                            <div className="text-white font-semibold">${option.rate.toLocaleString()}</div>
+                                            <div className="text-slate-400 text-sm">Prix Actuel</div>
+                                            <div className="text-white font-semibold">
+                                                {cryptoPrices[option.coinId]
+                                                    ? `$${cryptoPrices[option.coinId].toLocaleString()}`
+                                                    : loadingPrices
+                                                        ? "Chargement..."
+                                                        : "Prix indisponible"}
+                                            </div>
                                         </div>
                                     </div>
                                 </button>

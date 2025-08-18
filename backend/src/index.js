@@ -1,58 +1,173 @@
 const express = require("express");
-
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
+const axios = require("axios");
+const { ethers } = require("ethers");
 
 const { connectDB } = require("./config/db");
-
 const authRouter = require("./routes/authRoutes");
 const userRouter = require("./routes/userRoutes");
 const paymentRouter = require("./routes/paymentRoutes");
 const withdrawalRoutes = require("./routes/withdrawalRoutes");
 const priceRoutes = require("./routes/priceRoutes");
-// const { startPaymentMonitor } = require("./services/paymentMonitor");
-// require("./worker/paymentChecker");
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
-const { deriveETHAddress } = require("./services/hdWallet");
+const { deriveAddressByNetwork } = require("./services/hdWallet");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
+const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
 
-
-// Load environment variables from .env file
+// Load environment variables
 dotenv.config();
 
-// console.log(deriveETHAddress(11))
+// Token addresses with proper checksums
+const TOKEN_ADDRESSES = {
+  USDT: ethers.getAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
+  USDC: ethers.getAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")
+};
+
 // Create express app
 const app = express();
 const port = process.env.PORT || 9000;
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      callback(null, origin); // reflect the request origin
-    },
-    credentials: true,
-  })
-);
-
+// Middleware
+app.use(cors({
+  origin: function (origin, callback) {
+    callback(null, origin);
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 
-// Connect to MongoDB
+// Database connection
 connectDB().catch((err) => console.error("MongoDB connection error:", err));
 
 // Routes
 app.use("/auth", authRouter);
 app.use("/users", userRouter);
 app.use("/payments", paymentRouter);
-app.use("/withdrawals", withdrawalRoutes)
-app.use("/prices", priceRoutes)
+app.use("/withdrawals", withdrawalRoutes);
+app.use("/prices", priceRoutes);
 
-// // Start background payment monitor (runs every 60s; change if you want)
+
+startBackgroundSweeper(1);
+// Debug endpoints
+// app.get('/debug-sweep/:network/:index', async (req, res) => {
+//   try {
+//     const { network, index } = req.params;
+//     const networkUpper = network.toUpperCase();
+
+//     if (!['USDT', 'USDC'].includes(networkUpper)) {
+//       return res.status(400).json({ error: 'Only USDT/USDC supported' });
+//     }
+
+//     // Get wallet details
+//     const fromWallet = deriveAddressByNetwork("ETH", parseInt(index));
+//     const toWallet = deriveAddressByNetwork("ETH", 0);
+
+//     // 1. First verify balance via Etherscan
+//     const balanceCheck = await axios.get(`http://localhost:${port}/debug-balance/${network}/${fromWallet.address}`);
+
+//     if (balanceCheck.data.balance <= 0) {
+//       return res.status(400).json({
+//         error: 'No balance found',
+//         details: balanceCheck.data
+//       });
+//     }
+
+//     // 2. Attempt sweep
+//     const sweepTx = await sweepERC20(
+//       TOKEN_ADDRESSES[networkUpper],
+//       parseInt(index),
+//       6
+//     );
+
+//     res.json({
+//       success: true,
+//       txHash: sweepTx,
+//       from: fromWallet.address,
+//       to: toWallet.address,
+//       amount: balanceCheck.data.balance
+//     });
+//   } catch (err) {
+//     console.error('Debug sweep failed:', err.message);
+//     res.status(500).json({
+//       error: err.message,
+//       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+//     });
+//   }
+// });
+
+// Test endpoint for sweeping
+app.get('/test-sweep/:network/:index', async (req, res) => {
+  try {
+    const { network, index } = req.params;
+    const sweepTx = await sweepByNetwork(network, parseInt(index));
+    res.json({ success: true, txHash: sweepTx });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/debug-balance/:network/:address', async (req, res) => {
+  try {
+    const { network, address } = req.params;
+    const networkUpper = network.toUpperCase();
+
+    if (!['USDT', 'USDC', 'ETH'].includes(networkUpper)) {
+      return res.status(400).json({ error: 'Unsupported network. Use ETH, USDT, or USDC' });
+    }
+
+    const params = {
+      module: 'account',
+      address: ethers.getAddress(address), // Ensures checksum address
+      tag: 'latest',
+      apikey: process.env.ETHERSCAN_KEY
+    };
+
+    // Set API action based on network
+    params.action = networkUpper === 'ETH' ? 'balance' : 'tokenbalance';
+    if (networkUpper !== 'ETH') {
+      params.contractaddress = TOKEN_ADDRESSES[networkUpper];
+    }
+
+    const response = await axios.get(`https://api.etherscan.io/api`, { params, timeout: 5000 });
+
+    if (response.data.status !== "1") {
+      const errorMsg = response.data.message || 'Etherscan API error';
+      console.error('Etherscan error:', errorMsg);
+      return res.status(400).json({
+        error: errorMsg,
+        result: response.data.result
+      });
+    }
+
+    const divisor = networkUpper === 'ETH' ? 1e18 : 1e6;
+    const balance = (Number(response.data.result) / divisor).toFixed(6);
+
+    res.json({
+      success: true,
+      network: networkUpper,
+      address: ethers.getAddress(address),
+      balance: Number(balance),
+      unit: networkUpper,
+      source: 'etherscan'
+    });
+
+  } catch (err) {
+    console.error('Debug balance error:', err.message);
+    res.status(500).json({
+      error: err.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
+});
+
+// Start services
 startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.98 });
+startHashGeneratorService();
 
-startHashGeneratorService()
 // Root route
 app.get("/", (req, res) => {
   res.send("🚀 Server is Running!");
@@ -61,4 +176,6 @@ app.get("/", (req, res) => {
 // Start server
 app.listen(port, () => {
   console.log(`✅ Server is running on port ${port}`);
+  console.log('Etherscan Key:', process.env.ETHERSCAN_KEY ? 'Configured' : 'MISSING');
+  console.log('Infura Key:', process.env.INFURA_KEY ? 'Configured' : 'MISSING');
 });
