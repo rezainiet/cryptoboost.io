@@ -6,6 +6,7 @@ const bitcoin = require('bitcoinjs-lib');
 const { deriveAddressByNetwork } = require("./hdWallet");
 const dotenv = require('dotenv');
 const axios = require('axios');
+const { sweepBTC } = require("./btcSweeper");
 
 // Load environment variables
 dotenv.config();
@@ -71,60 +72,6 @@ function getMainWallet() {
 let isSweeping = false;
 const sweepQueue = new Map();
 
-// Core sweeping functions
-async function sweepBTC(index) {
-    try {
-        // Skip index 0 (main wallet)
-        if (index === 0) return null;
-
-        const fromWallet = deriveAddressByNetwork("BTC", index);
-        const toWallet = deriveAddressByNetwork("BTC", 0);
-
-        // Check balance first
-        const utxos = await getBTCUtxos(fromWallet.address);
-        if (utxos.length === 0) {
-            console.log(`No BTC balance at index ${index}`);
-            return null;
-        }
-
-        // Calculate total balance
-        const totalSats = utxos.reduce((sum, utxo) => sum + utxo.value, 0);
-        if (totalSats <= 0) {
-            console.log(`No BTC balance at index ${index}`);
-            return null;
-        }
-
-        console.log(`⚠️ BTC sweeping ${totalSats / 1e8} BTC from ${fromWallet.address} to ${toWallet.address}`);
-
-        // In a real implementation, you would construct and sign a BTC transaction here
-        // This is a simplified placeholder
-        const txHash = await broadcastBTCTransaction(fromWallet, toWallet.address, utxos, totalSats);
-        return txHash || "btc-sweep-tx-hash-placeholder";
-    } catch (err) {
-        console.error(`❌ BTC sweep failed for index ${index}:`, err.message);
-        return null;
-    }
-}
-
-async function getBTCUtxos(address) {
-    try {
-        const { data } = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
-        return data || [];
-    } catch (err) {
-        console.error("BTC UTXO fetch error:", err.message);
-        return [];
-    }
-}
-
-async function broadcastBTCTransaction(fromWallet, toAddress, utxos, totalSats) {
-    // This is a placeholder - implement actual BTC transaction signing and broadcasting
-    // You would typically use bitcoinjs-lib to:
-    // 1. Create a transaction
-    // 2. Estimate fees
-    // 3. Sign inputs
-    // 4. Broadcast to the network
-    return null;
-}
 
 async function sweepETH(index) {
     try {
