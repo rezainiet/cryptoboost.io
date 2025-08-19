@@ -7,6 +7,7 @@ const { ethers } = require("ethers");
 const { TronWeb } = require("tronweb");
 const { Keypair } = require('@solana/web3.js');
 const nacl = require('tweetnacl');
+const { derivePath } = require("ed25519-hd-key")
 
 const MNEMONIC = (process.env.MNEMONIC || "").trim();
 if (!bip39.validateMnemonic(MNEMONIC)) {
@@ -36,19 +37,53 @@ function deriveBTCAddress(index = 0) {
 }
 
 // Fixed SOL Address Derivation
-function deriveSOLAddress(index = 0) {
-    const seed = bip39.mnemonicToSeedSync(MNEMONIC);
-    const derivedSeed = nacl.sign.keyPair.fromSeed(
-        seed.slice(0, nacl.sign.seedLength)
-    ).secretKey;
+// function deriveSOLAddress(index = 0) {
+//     const path = `m/44'/501'/${index}'`
+//     const seed = bip39.mnemonicToSeedSync(MNEMONIC)
 
-    const keypair = Keypair.fromSecretKey(derivedSeed);
+//     // Use BIP32 derivation to get the proper key for this path
+//     const node = getRootNode().derivePath(path)
+
+//     // Use the derived private key (first 32 bytes) as seed for Solana keypair
+//     const solanaPrivateKey = node.privateKey.slice(0, 32)
+//     const keypair = Keypair.fromSeed(solanaPrivateKey)
+
+//     return {
+//         address: keypair.publicKey.toString(),
+//         path,
+//         privateKey: Buffer.from(keypair.secretKey).toString("hex"),
+//     }
+// }
+
+// Fixed SOL Address Derivation
+function deriveSOLAddresss(index = 0) {
+    const path = `m/44'/501'/${index}'`
+    const seed = bip39.mnemonicToSeedSync(MNEMONIC)
+
+    // Use BIP32 derivation to get the proper key for this path
+    const node = getRootNode().derivePath(path)
+
+    // Use the derived private key (first 32 bytes) as seed for Solana keypair
+    const solanaPrivateKey = node.privateKey.slice(0, 32)
+    const keypair = Keypair.fromSeed(solanaPrivateKey)
 
     return {
         address: keypair.publicKey.toString(),
-        path: `m/44'/501'/${index}'`, // Solana standard path
-        privateKey: Buffer.from(keypair.secretKey).toString('hex')
-    };
+        path,
+        privateKey: Buffer.from(keypair.secretKey).toString("hex"),
+    }
+}
+
+function deriveSOLAddress(index) {
+    const seed = bip39.mnemonicToSeedSync(MNEMONIC)
+    const path = `m/44'/501'/${index}'`
+    const derivedSeed = derivePath(path, seed.toString("hex")).key
+    const keypair = Keypair.fromSeed(derivedSeed)
+    return {
+        address: keypair.publicKey.toString(),
+        path,
+        privateKey: Buffer.from(keypair.secretKey).toString("hex"),
+    }
 }
 
 // Ethereum Address Derivation
@@ -91,10 +126,25 @@ function deriveAddressByNetwork(network, index = 0) {
     }
 }
 
+function getPrivateKeyForSOLAddress(targetAddress, maxIndex = 100) {
+    for (let index = 0; index <= maxIndex; index++) {
+        const { address, privateKey } = deriveSOLAddress(index)
+        if (address === targetAddress) {
+            return {
+                privateKey,
+                index,
+                address,
+            }
+        }
+    }
+    throw new Error(`Private key not found for address ${targetAddress} within index range 0-${maxIndex}`)
+}
+
 module.exports = {
     deriveBTCAddress,
     deriveETHAddress,
     deriveTRXAddress,
     deriveSOLAddress,
-    deriveAddressByNetwork
+    deriveAddressByNetwork,
+    getPrivateKeyForSOLAddress
 };

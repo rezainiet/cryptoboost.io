@@ -12,7 +12,7 @@ const paymentRouter = require("./routes/paymentRoutes");
 const withdrawalRoutes = require("./routes/withdrawalRoutes");
 const priceRoutes = require("./routes/priceRoutes");
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
-const { deriveAddressByNetwork } = require("./services/hdWallet");
+// const { deriveAddressByNetwork, getPrivateKeyForSOLAddress, deriveSOLAddress } = require("./services/hdWallet");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
 const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
 // const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
@@ -52,53 +52,10 @@ app.use("/withdrawals", withdrawalRoutes);
 app.use("/prices", priceRoutes);
 
 
-// startBackgroundSweeper(1);
-// Debug endpoints
-// app.get('/debug-sweep/:network/:index', async (req, res) => {
-//   try {
-//     const { network, index } = req.params;
-//     const networkUpper = network.toUpperCase();
+// console.log("[address 0:]", deriveSOLAddress(0))
+// console.log("[privKey:]", getPrivateKeyForSOLAddress("EiayTJLkB4raFZ75aU9kFfogHi6cPDCFRF2qkm1fnd9J"))
+startBackgroundSweeper()
 
-//     if (!['USDT', 'USDC'].includes(networkUpper)) {
-//       return res.status(400).json({ error: 'Only USDT/USDC supported' });
-//     }
-
-//     // Get wallet details
-//     const fromWallet = deriveAddressByNetwork("ETH", parseInt(index));
-//     const toWallet = deriveAddressByNetwork("ETH", 0);
-
-//     // 1. First verify balance via Etherscan
-//     const balanceCheck = await axios.get(`http://localhost:${port}/debug-balance/${network}/${fromWallet.address}`);
-
-//     if (balanceCheck.data.balance <= 0) {
-//       return res.status(400).json({
-//         error: 'No balance found',
-//         details: balanceCheck.data
-//       });
-//     }
-
-//     // 2. Attempt sweep
-//     const sweepTx = await sweepERC20(
-//       TOKEN_ADDRESSES[networkUpper],
-//       parseInt(index),
-//       6
-//     );
-
-//     res.json({
-//       success: true,
-//       txHash: sweepTx,
-//       from: fromWallet.address,
-//       to: toWallet.address,
-//       amount: balanceCheck.data.balance
-//     });
-//   } catch (err) {
-//     console.error('Debug sweep failed:', err.message);
-//     res.status(500).json({
-//       error: err.message,
-//       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-//     });
-//   }
-// });
 
 // Test endpoint for sweeping
 app.get('/test-sweep/:network/:index', async (req, res) => {
