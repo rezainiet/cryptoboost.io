@@ -52,9 +52,8 @@ const paymentOptions = [
         glowColor: "green-400",
         network: "Solana Network",
         coinId: "solana",
-    }
+    },
 ]
-
 
 const PaymentPage = () => {
     const [user] = useAuthState(auth)
@@ -72,7 +71,7 @@ const PaymentPage = () => {
     const [cryptoAmount, setCryptoAmount] = useState(0)
     const [totalWithFees, setTotalWithFees] = useState(0)
     const [addressError, setAddressError] = useState(null)
-    const [cryptoPrices, setCryptoPrices] = useState({}) // Added state for real-time prices
+    const [cryptoPrices, setCryptoPrices] = useState({}) // Store prices by symbol instead of coinId
     const [loadingPrices, setLoadingPrices] = useState(false) // Added loading state for prices
 
     const isCreatingOrder = useRef(false)
@@ -85,11 +84,10 @@ const PaymentPage = () => {
         const total = baseAmount + baseAmount * vatRate // Removed processing fee
         setTotalWithFees(total)
 
-        // Calculate crypto amount using real price
-        const selectedOption = paymentOptions.find((p) => p.id === selectedPayment)
-        if (selectedOption && cryptoPrices[selectedOption.coinId]) {
-            const cryptoValue = total / cryptoPrices[selectedOption.coinId]
+        if (cryptoPrices[selectedPayment]) {
+            const cryptoValue = total / cryptoPrices[selectedPayment]
             setCryptoAmount(cryptoValue)
+            console.log("[v0] Calculated crypto amount:", cryptoValue, "for", selectedPayment)
         }
     }, [initialPkg, selectedPayment, cryptoPrices])
 
@@ -204,28 +202,28 @@ const PaymentPage = () => {
     }
 
     const generateQRCode = (address) => {
-        if (!address) return;
-        const selectedOption = paymentOptions.find((p) => p.id === selectedPayment);
+        if (!address) return
+        const selectedOption = paymentOptions.find((p) => p.id === selectedPayment)
 
-        let qrData = "";
+        let qrData = ""
         if (selectedPayment === "USDT" || selectedPayment === "USDC") {
-            qrData = `${selectedPayment}:${paymentAddress}?amount=${cryptoAmount}`;
+            qrData = `${selectedPayment}:${paymentAddress}?amount=${cryptoAmount}`
         } else if (selectedPayment === "SOL") {
-            qrData = `sol:${paymentAddress}?amount=${cryptoAmount}`;
+            qrData = `sol:${paymentAddress}?amount=${cryptoAmount}`
         } else {
-            qrData = `${selectedPayment.toLowerCase()}:${paymentAddress}?amount=${cryptoAmount}`;
+            qrData = `${selectedPayment.toLowerCase()}:${paymentAddress}?amount=${cryptoAmount}`
         }
 
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
-        setQrCodeUrl(qrUrl);
-    };
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`
+        setQrCodeUrl(qrUrl)
+    }
 
     const fetchCryptoPrices = async () => {
         if (loadingPrices) return
 
         setLoadingPrices(true)
         try {
-            const response = await fetch(`${API_BASE}/prices/current`)
+            const response = await fetch(`${API_BASE}/prices/current?fiat=eur`)
             if (response.ok) {
                 const data = await response.json()
                 setCryptoPrices(data.prices)
@@ -250,16 +248,14 @@ const PaymentPage = () => {
         setQrCodeUrl(null)
         setAddressError(null)
 
-        if (initialPkg && cryptoPrices) {
+        if (initialPkg && cryptoPrices[networkId]) {
             const baseAmount = Number(initialPkg.investment)
             const vatRate = 0.05
             const total = baseAmount + baseAmount * vatRate
 
-            const selectedOption = paymentOptions.find((p) => p.id === networkId)
-            if (selectedOption && cryptoPrices[selectedOption.coinId]) {
-                const cryptoValue = total / cryptoPrices[selectedOption.coinId]
-                setCryptoAmount(cryptoValue)
-            }
+            const cryptoValue = total / cryptoPrices[networkId]
+            setCryptoAmount(cryptoValue)
+            console.log("[v0] Updated crypto amount for", networkId, ":", cryptoValue)
         }
     }
 
@@ -397,8 +393,8 @@ const PaymentPage = () => {
                                         <div className="text-right">
                                             <div className="text-slate-400 text-sm">Prix Actuel</div>
                                             <div className="text-white font-semibold">
-                                                {cryptoPrices[option.coinId]
-                                                    ? `$${cryptoPrices[option.coinId].toLocaleString()}`
+                                                {cryptoPrices[option.id]
+                                                    ? `€${cryptoPrices[option.id].toLocaleString()}`
                                                     : loadingPrices
                                                         ? "Chargement..."
                                                         : "Prix indisponible"}

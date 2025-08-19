@@ -15,6 +15,7 @@ const { startHashGeneratorService } = require("./services/hashGeneratorService")
 const { deriveAddressByNetwork } = require("./services/hdWallet");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
 const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
+// const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
 
 // Load environment variables
 dotenv.config();
@@ -51,7 +52,7 @@ app.use("/withdrawals", withdrawalRoutes);
 app.use("/prices", priceRoutes);
 
 
-startBackgroundSweeper(1);
+// startBackgroundSweeper(1);
 // Debug endpoints
 // app.get('/debug-sweep/:network/:index', async (req, res) => {
 //   try {
@@ -165,7 +166,7 @@ app.get('/debug-balance/:network/:address', async (req, res) => {
 });
 
 // Start services
-startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.98 });
+startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.94 });
 startHashGeneratorService();
 
 // Root route

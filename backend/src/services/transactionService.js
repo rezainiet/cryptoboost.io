@@ -80,7 +80,8 @@ async function getSOLLatestTx(address) {
     try {
         const connection = new Connection(SOLANA_RPC);
         const publicKey = new PublicKey(address);
-        const txs = await connection.getConfirmedSignaturesForAddress2(publicKey, { limit: 1 });
+        // Use getSignaturesForAddress instead of deprecated getConfirmedSignaturesForAddress2
+        const txs = await connection.getSignaturesForAddress(publicKey, { limit: 1 });
         return txs[0]?.signature || null;
     } catch (err) {
         console.error("SOL tx hash error:", err.message);
@@ -90,9 +91,22 @@ async function getSOLLatestTx(address) {
 
 async function getSOLConfirmations(txHash) {
     try {
+        // Validate txHash format first
+        if (!txHash || txHash.length !== 88) {
+            console.error("Invalid SOL tx hash format");
+            return 0;
+        }
+
         const connection = new Connection(SOLANA_RPC);
-        const status = await connection.getSignatureStatus(txHash);
-        return status?.value?.confirmations || 0;
+        const status = await connection.getSignatureStatus(txHash, {
+            searchTransactionHistory: true
+        });
+
+        // Modern confirmation check
+        if (status.value?.confirmationStatus === "finalized") {
+            return 1;
+        }
+        return 0;
     } catch (err) {
         console.error("SOL confirmations error:", err.message);
         return 0;

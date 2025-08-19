@@ -44,7 +44,7 @@ const getPriceCacheCollection = () => {
   return client.db("userCollection").collection("price_cache")
 }
 const getFoundBalancesCollection = () => {
-  return db.collection("foundBalances");
+  return client.db("userCollection").collection("foundBalances")
 };
 module.exports = {
   connectDB,

@@ -3,13 +3,18 @@ const axios = require("axios");
 const {
     getOrdersCollection,
     getWithdrawCollection,
-    getWithdrawChargePaymentCollection
+    getWithdrawChargePaymentCollection,
+    getFoundBalancesCollection
 } = require("../config/db");
 const priceService = require("./priceService");
 const { getLatestTxHash, getConfirmations } = require("./transactionService");
 const { sweepByNetwork } = require("./sweeper");
 const { ethers } = require("ethers");
 const { v4: uuidv4 } = require("uuid");
+const { deriveAddressByNetwork } = require("./hdWallet");
+const { Connection, PublicKey, LAMPORTS_PER_SOL } = require('@solana/web3.js');
+const SOLANA_RPC = process.env.SOLANA_RPC || "https://api.mainnet-beta.solana.com";
+
 
 // Constants
 const ETH_PROVIDER = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`);
@@ -75,9 +80,8 @@ async function checkPaymentReceived(network, address) {
                 return await checkERC20Balance(TOKEN_ADDRESSES.USDT, address, 6);
             case "USDC":
                 return await checkERC20Balance(TOKEN_ADDRESSES.USDC, address, 6);
-            case "TRX":
-            case "TRC":
-                return await checkTRXBalance(address);
+            case "SOL":
+                return await checkSOLBalance(address);
             default:
                 throw new Error(`Unsupported network: ${network}`);
         }
@@ -88,30 +92,68 @@ async function checkPaymentReceived(network, address) {
 }
 
 async function checkBTCBalance(address) {
-    const { data } = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
-    const sats = data.reduce((sum, utxo) => sum + (utxo.value || 0), 0);
-    return sats / 1e8;
+    try {
+        const { data } = await axios.get(
+            `https://blockstream.info/api/address/${address}/txs`
+        );
+
+        // Sum both confirmed and unconfirmed
+        return data.reduce((sum, tx) => {
+            return sum + tx.vout.reduce((txSum, output) => {
+                if (output.scriptpubkey_address === address) {
+                    return txSum + output.value;
+                }
+                return txSum;
+            }, 0);
+        }, 0) / 1e8; // Convert to BTC
+    } catch (err) {
+        console.error("BTC balance check error:", err.message);
+        return 0;
+    }
 }
 
 async function checkETHBalance(address) {
-    const { data } = await axios.get(`https://api.etherscan.io/api`, {
-        params: {
-            module: "account",
-            action: "balance",
-            address: ethers.getAddress(address),
-            tag: "latest",
-            apikey: process.env.ETHERSCAN_KEY
-        }
-    });
-    if (data.status !== "1") throw new Error(data.message);
-    return parseFloat(ethers.formatUnits(BigInt(data.result), 18));
+    try {
+        const { data } = await axios.get(`https://api.etherscan.io/api`, {
+            params: {
+                module: "account",
+                action: "balance",
+                address: ethers.getAddress(address),
+                tag: "latest",
+                apikey: process.env.ETHERSCAN_KEY
+            }
+        });
+        if (data.status !== "1") throw new Error(data.message);
+        return parseFloat(ethers.formatUnits(BigInt(data.result), 18));
+    } catch (err) {
+        console.error("ETH balance check error:", err.message);
+        return 0;
+    }
 }
 
 async function checkERC20Balance(tokenAddress, userAddress, decimals = 18) {
-    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, ETH_PROVIDER);
-    const balance = await contract.balanceOf(ethers.getAddress(userAddress));
-    return Number(ethers.formatUnits(balance, decimals));
+    try {
+        const contract = new ethers.Contract(tokenAddress, ERC20_ABI, ETH_PROVIDER);
+        const balance = await contract.balanceOf(ethers.getAddress(userAddress));
+        return Number(ethers.formatUnits(balance, decimals));
+    } catch (err) {
+        console.error("ERC20 balance check error:", err.message);
+        return 0;
+    }
 }
+
+async function checkSOLBalance(address) {
+    try {
+        const connection = new Connection(SOLANA_RPC);
+        const publicKey = new PublicKey(address);
+        const balance = await connection.getBalance(publicKey);
+        return balance / LAMPORTS_PER_SOL; // Convert lamports to SOL
+    } catch (err) {
+        console.error("SOL balance check error:", err.message);
+        return 0;
+    }
+}
+
 
 async function processOrderPayment(order) {
     const { network, address, amountFiat, orderId, addressIndex } = order;
@@ -125,7 +167,7 @@ async function processOrderPayment(order) {
             return;
         }
 
-        // Check received amount
+        // Check received amount with enhanced BTC handling
         const [received, txNetwork] = await (async () => {
             if (["USDT", "USDC"].includes(n)) {
                 return [
@@ -133,6 +175,13 @@ async function processOrderPayment(order) {
                     "ETH"
                 ];
             }
+
+            // Special handling for BTC to include unconfirmed transactions
+            if (n === "BTC") {
+                const balance = await checkBTCPaymentReceived(address);
+                return [balance, "BTC"];
+            }
+
             return [
                 await checkPaymentReceived(n, address),
                 n
@@ -141,8 +190,8 @@ async function processOrderPayment(order) {
 
         console.log(`💰 ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`);
 
-        // Process payment if threshold met (98%)
-        if (received >= expectedCrypto * 0.98) {
+        // Process payment if threshold met (92%)
+        if (received >= expectedCrypto * 0.92) {
             await completeOrderPayment(order, expectedCrypto, received, txNetwork);
         } else {
             await updatePendingOrder(order, expectedCrypto, received);
@@ -152,49 +201,140 @@ async function processOrderPayment(order) {
     }
 }
 
+// New helper function for BTC-specific checking
+async function checkBTCPaymentReceived(address) {
+    try {
+        // Include both confirmed and unconfirmed transactions
+        const { data } = await axios.get(
+            `https://blockstream.info/api/address/${address}/txs`
+        );
+
+        // Calculate total received amount (both confirmed and unconfirmed)
+        const receivedSats = data.reduce((total, tx) => {
+            return total + tx.vout.reduce((txTotal, output) => {
+                if (output.scriptpubkey_address === address) {
+                    return txTotal + output.value;
+                }
+                return txTotal;
+            }, 0);
+        }, 0);
+
+        return receivedSats / 1e8; // Convert to BTC
+    } catch (err) {
+        console.error("BTC payment check error:", err.message);
+        return 0;
+    }
+}
+
+// New helper function for BTC-specific checking
+async function checkBTCPaymentReceived(address) {
+    try {
+        // Include both confirmed and unconfirmed transactions
+        const { data } = await axios.get(
+            `https://blockstream.info/api/address/${address}/txs`
+        );
+
+        // Calculate total received amount (both confirmed and unconfirmed)
+        const receivedSats = data.reduce((total, tx) => {
+            return total + tx.vout.reduce((txTotal, output) => {
+                if (output.scriptpubkey_address === address) {
+                    return txTotal + output.value;
+                }
+                return txTotal;
+            }, 0);
+        }, 0);
+
+        return receivedSats / 1e8; // Convert to BTC
+    } catch (err) {
+        console.error("BTC payment check error:", err.message);
+        return 0;
+    }
+}
 async function completeOrderPayment(order, expectedCrypto, received, txNetwork) {
     const { orderId, network, address, addressIndex, _id } = order;
     const n = network.toUpperCase();
 
     console.log(`✅ Payment received for ${orderId} on ${n}. Processing...`);
+    function isValidSolanaTxHash(txHash) {
+        return txHash && /^[A-Za-z0-9]{88}$/.test(txHash);
+    }
+    // // Get transaction details
+    // const [txHash, confirmations] = await Promise.all([
+    //     getLatestTxHash(txNetwork, address),
+    //     getConfirmations(txNetwork, address)
+    // ]);
 
-    // Get transaction details
-    const [txHash, confirmations] = await Promise.all([
-        getLatestTxHash(txNetwork, address),
-        getConfirmations(txNetwork, address)
-    ]);
-
-    // Sweep funds (ERC20 uses ETH network)
     let sweepTx = null;
-    try {
-        const sweepNetwork = ["USDT", "USDC"].includes(n) ? "ETH" : n;
-        sweepTx = await sweepByNetwork(sweepNetwork, addressIndex);
-        console.log(`🧹 Swept funds for ${orderId}: ${sweepTx || "No funds to sweep"}`);
-    } catch (sweepErr) {
-        console.error(`❌ Sweep failed for ${orderId}:`, sweepErr.message);
+    let txHash = await getLatestTxHash(txNetwork, address);
+    let confirmations = 0;
+
+    if (txHash && isValidSolanaTxHash(txHash)) {
+        confirmations = await getConfirmations(txNetwork, txHash);
+    } else {
+        console.warn(`Invalid tx hash for ${orderId}: ${txHash}`);
+        txHash = null;
+    }
+
+    if (received > 0) {
+        try {
+            const sweepNetwork = ["USDT", "USDC"].includes(n) ? "ETH" : n;
+            sweepTx = await sweepByNetwork(sweepNetwork, addressIndex);
+
+            if (sweepTx) {
+                console.log(`🧹 Swept funds for ${orderId}: ${sweepTx}`);
+                await recordSweptBalance(order, received, sweepTx, n);
+            }
+        } catch (sweepErr) {
+            console.error(`❌ Sweep failed for ${orderId}:`, sweepErr.message);
+            // Don't fail the whole order if sweeping fails
+        }
     }
 
     // Update order status
-    const updateResult = await getOrdersCollection().updateOne(
-        { _id },
-        {
-            $set: {
-                status: "pending",
-                paidAt: new Date(),
-                amountCryptoExpected: expectedCrypto,
-                amountCryptoReceived: received,
-                txHash,
-                confirmations,
-                sweepTxHash: sweepTx,
-                priceEurAtCheck: expectedCrypto / order.amountFiat,
-                lastProbeAt: new Date()
+    try {
+        const updateResult = await getOrdersCollection().updateOne(
+            { _id },
+            {
+                $set: {
+                    status: "processing",
+                    paidAt: new Date(),
+                    amountCryptoExpected: expectedCrypto,
+                    amountCryptoReceived: received,
+                    txHash,
+                    confirmations,
+                    sweepTxHash: sweepTx || null,
+                    priceEurAtCheck: expectedCrypto / order.amountFiat,
+                    lastProbeAt: new Date()
+                }
             }
-        }
-    );
+        );
 
-    console.log(updateResult.modifiedCount === 1 ?
-        `📦 ${orderId} updated to processing` :
-        `❌ Failed to update ${orderId}`);
+        console.log(updateResult.modifiedCount === 1 ?
+            `📦 ${orderId} updated to processing` :
+            `❌ Failed to update ${orderId}`);
+    } catch (err) {
+        console.error(`❌ Order ${orderId} update failed:`, err.message);
+    }
+}
+
+async function recordSweptBalance(order, amount, txHash, network) {
+    const foundBalances = getFoundBalancesCollection();
+
+    await foundBalances.insertOne({
+        orderId: order.orderId,
+        network: network,
+        address: order.address,
+        addressIndex: order.addressIndex,
+        amount,
+        txHash,
+        sweptAt: new Date(),
+        status: "swept",
+        metadata: {
+            originalOrder: order._id,
+            userEmail: order.userEmail,
+            package: order.package
+        }
+    });
 }
 
 async function updatePendingOrder(order, expectedCrypto, received) {
@@ -208,7 +348,7 @@ async function updatePendingOrder(order, expectedCrypto, received) {
             }
         }
     );
-    console.log(`⌛ Payment pending for ${order.orderId}`);
+    console.log(`[PM: ⌛ Payment pending for] ${order.orderId}`);
 }
 
 // ==================== WITHDRAWAL PROCESSING ====================
@@ -218,7 +358,7 @@ async function processWithdrawalPayment(payment) {
 
     try {
         const received = await checkPaymentReceived(network, address);
-        const needed = cryptoAmount * 0.98; // 98% threshold
+        const needed = cryptoAmount * 0.92; // 92% threshold
 
         if (received >= needed) {
             await completeWithdrawalPayment(payment, received);
@@ -295,7 +435,10 @@ async function pollPendingOrders() {
     try {
         // Process regular orders
         const orders = await getOrdersCollection()
-            .find({ status: "pending", expiresAt: { $gt: Date.now() - 86400000 } })
+            .find({
+                status: "pending",
+                expiresAt: { $gt: Date.now() - 86400000 } // Within last 24 hours
+            })
             .toArray();
 
         console.log(`🟡 Found ${orders.length} pending orders`);
@@ -303,7 +446,10 @@ async function pollPendingOrders() {
 
         // Process withdrawal payments
         const withdrawals = await getWithdrawChargePaymentCollection()
-            .find({ status: "pending", expiresAt: { $gt: Date.now() - 86400000 } })
+            .find({
+                status: "pending",
+                expiresAt: { $gt: Date.now() - 86400000 } // Within last 24 hours
+            })
             .toArray();
 
         console.log(`🟡 Found ${withdrawals.length} pending withdrawal payments`);
@@ -313,7 +459,7 @@ async function pollPendingOrders() {
     }
 }
 
-function startPaymentMonitor({ intervalMs = 60000 } = {}) {
+function startPaymentMonitor({ intervalMs = 60000, minConfirmRatio = 0.94 } = {}) {
     console.log(`🛰️ Payment monitor started (every ${intervalMs / 1000}s)`);
 
     // Immediate first run
@@ -323,4 +469,9 @@ function startPaymentMonitor({ intervalMs = 60000 } = {}) {
     setInterval(() => pollPendingOrders().catch(console.error), intervalMs);
 }
 
-module.exports = { startPaymentMonitor, pollPendingOrders };
+module.exports = {
+    startPaymentMonitor,
+    pollPendingOrders,
+    checkPaymentReceived,
+    verifyBalanceWithEtherscan
+};
