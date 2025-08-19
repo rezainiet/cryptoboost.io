@@ -5,7 +5,7 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { useLocation, useNavigate } from "react-router-dom"
 import { auth } from "../../firebase"
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:9000"
+const API_BASE = import.meta.env.VITE_API_BASE || "https://api.cryptoboost.capital"
 
 const paymentOptions = [
     {

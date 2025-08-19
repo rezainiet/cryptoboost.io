@@ -36,12 +36,12 @@ const Dashboard = () => {
             route: "/dashboard/performance",
             iconSvg: "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z",
         },
-        {
-            icon: "💰",
-            label: "Portefeuille",
-            route: "/dashboard/portfolio",
-            iconSvg: "M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v13z",
-        },
+        // {
+        //     icon: "💰",
+        //     label: "Portefeuille",
+        //     route: "/dashboard/portfolio",
+        //     iconSvg: "M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v13z",
+        // },
         {
             icon: "🔄",
             label: "Transactions",

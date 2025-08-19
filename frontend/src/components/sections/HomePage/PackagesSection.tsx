@@ -25,22 +25,6 @@ const PackagesSection = () => {
 
     const packages = [
         {
-            title: "Test Starter",
-            subtitle: "Parfait pour débuter dans l'investissement automatisé",
-            investment: 5,
-            returns: 500, // estimated gain shown in UI
-            actualReturns: 1200, // actual gain from backend (for reference)
-            timeframe: "2 heures",
-            apy: "800%",
-            token: "ETH",
-            tokenIcon: "Ξ",
-            robotType: "single",
-            popular: false,
-            cryptoOptions: ["ETH", "SOL", "BTC"],
-            accentColor: "from-cyan-400 to-blue-500",
-            glowColor: "cyan-400",
-        },
-        {
             title: "Package Starter",
             subtitle: "Parfait pour débuter dans l'investissement automatisé",
             investment: 150,
