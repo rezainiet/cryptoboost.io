@@ -36,23 +36,23 @@ const AdminDashboard = () => {
             }
 
             // Fetch investment statistics
-            const investmentResponse = await fetch("http://localhost:9000/api/admin/investments/stats", requestOptions)
+            const investmentResponse = await fetch("https://api.cryptoboost.capital/api/admin/investments/stats", requestOptions)
             const investmentResult = await investmentResponse.json()
 
             // Fetch user statistics
-            const userResponse = await fetch("http://localhost:9000/api/admin/users/stats", requestOptions)
+            const userResponse = await fetch("https://api.cryptoboost.capital/api/admin/users/stats", requestOptions)
             const userResult = await userResponse.json()
 
             // Fetch performance statistics
-            const performanceResponse = await fetch("http://localhost:9000/api/admin/performance/stats", requestOptions)
+            const performanceResponse = await fetch("https://api.cryptoboost.capital/api/admin/performance/stats", requestOptions)
             const performanceResult = await performanceResponse.json()
 
             // Fetch daily investment trends
-            const trendsResponse = await fetch("http://localhost:9000/api/admin/investments/trends?days=7", requestOptions)
+            const trendsResponse = await fetch("https://api.cryptoboost.capital/api/admin/investments/trends?days=7", requestOptions)
             const trendsResult = await trendsResponse.json()
 
             // Fetch investment by currency breakdown
-            const currencyResponse = await fetch("http://localhost:9000/api/admin/investments/by-currency", requestOptions)
+            const currencyResponse = await fetch("https://api.cryptoboost.capital/api/admin/investments/by-currency", requestOptions)
             const currencyResult = await currencyResponse.json()
 
             setInvestmentStats({
