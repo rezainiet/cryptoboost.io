@@ -31,6 +31,13 @@ export default function RegisterPage() {
         return null
     }
 
+    const handleNavigateTerms = () => {
+        navigate("/terms-conditions")
+    }
+    const handleNavigatePrivacy = () => {
+        navigate("/privacy-policy")
+    }
+
     const checkPasswordStrength = (password) => {
         const feedback = []
         let score = 0
@@ -355,11 +362,11 @@ export default function RegisterPage() {
                                 />
                                 <span className="text-sm text-gray-600 leading-relaxed">
                                     J'accepte les{" "}
-                                    <button type="button" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                                    <button type="button" onClick={() => handleNavigateTerms()} className="text-emerald-600 hover:text-emerald-700 font-medium">
                                         conditions d'utilisation
                                     </button>{" "}
                                     et la{" "}
-                                    <button type="button" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                                    <button type="button" onClick={() => handleNavigatePrivacy()} className="text-emerald-600 hover:text-emerald-700 font-medium">
                                         politique de confidentialité
                                     </button>
                                 </span>

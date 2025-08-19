@@ -20,7 +20,7 @@ const Hero = () => {
         { percentage: "123%", detail: "+132.91 USDT/jour", icon: "T", color: "bg-emerald-300" },
         { percentage: "4123%", detail: "+537.32 USDT/jour", icon: "T", color: "bg-teal-300" },
     ]
-    console.log(user?.email)
+    // console.log(user?.email)
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900 relative overflow-hidden">
             <Navbar />
@@ -48,7 +48,7 @@ const Hero = () => {
 
                         <div className="flex flex-col sm:flex-row gap-4">
                             <button className="bg-lime-400 text-black px-8 py-3 rounded-lg font-semibold hover:bg-lime-300 transition-colors">
-                                Se connecter
+                                {user?.email ? "Tableau de bord" : "Se connecter"}
                             </button>
                             <button className="text-gray-300 hover:text-white transition-colors">Lire la Documentation</button>
                         </div>

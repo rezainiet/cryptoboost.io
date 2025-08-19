@@ -24,25 +24,21 @@ export default function Navbar() {
 
                 {/* Desktop Navigation */}
                 <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
-                    <a href="#" className="text-white/80 hover:text-white transition-colors text-sm xl:text-base">
-                        Analytiques
+                    <a
+                        href="/privacy-policy"
+                        className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"
+                    >
+                        Politique de Confidentialité
                     </a>
-                    <a href="#" className="text-white/80 hover:text-white transition-colors text-sm xl:text-base">
-                        Documentation
-                    </a>
-                    <a href="#" className="text-white/80 hover:text-white transition-colors text-sm xl:text-base">
-                        Gouvernance
-                    </a>
-                    <a href="#" className="text-white/80 hover:text-white transition-colors text-sm xl:text-base">
-                        À propos
-                    </a>
-                    <a href="#" className="text-white/80 hover:text-white transition-colors text-sm xl:text-base">
-                        Communauté
-                    </a>
-                    <a href="#" className="text-white/80 hover:text-white transition-colors text-sm xl:text-base">
-                        Produits
+                    <a
+                        href="/terms-conditions"
+                        className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"
+                    >
+                        Conditions Générales
                     </a>
                 </div>
+
+
 
                 {/* AuthManager component - hidden on small screens when user is logged in */}
                 <div className={`hidden ${user ? "sm:block" : "md:block"}`}>
@@ -73,18 +69,18 @@ export default function Navbar() {
                         {/* Navigation links */}
                         <div className="space-y-2">
                             <a
-                                href="#"
+                                href="/privacy-policy"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
-                                Analytiques
+                                Politique de Confidentialité
                             </a>
                             <a
-                                href="#"
+                                href="/terms-conditions"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
-                                Documentation
+                                Conditions Générales
                             </a>
-                            <a
+                            {/* <a
                                 href="#"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
@@ -107,7 +103,7 @@ export default function Navbar() {
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
                                 Produits
-                            </a>
+                            </a> */}
                         </div>
 
                         {/* AuthManager for mobile */}

@@ -11,11 +11,10 @@ const userRouter = require("./routes/userRoutes");
 const paymentRouter = require("./routes/paymentRoutes");
 const withdrawalRoutes = require("./routes/withdrawalRoutes");
 const priceRoutes = require("./routes/priceRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
-// const { deriveAddressByNetwork, getPrivateKeyForSOLAddress, deriveSOLAddress } = require("./services/hdWallet");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
 const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
-// const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +49,7 @@ app.use("/users", userRouter);
 app.use("/payments", paymentRouter);
 app.use("/withdrawals", withdrawalRoutes);
 app.use("/prices", priceRoutes);
+app.use("/api/admin", adminRoutes);
 
 
 // console.log("[address 0:]", deriveSOLAddress(0))
@@ -134,6 +134,4 @@ app.get("/", (req, res) => {
 // Start server
 app.listen(port, () => {
   console.log(`✅ Server is running on port ${port}`);
-  console.log('Etherscan Key:', process.env.ETHERSCAN_KEY ? 'Configured' : 'MISSING');
-  console.log('Infura Key:', process.env.INFURA_KEY ? 'Configured' : 'MISSING');
 });

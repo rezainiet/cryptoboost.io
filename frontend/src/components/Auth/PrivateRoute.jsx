@@ -1,11 +1,12 @@
 "use client"
 
 import { useAuthState } from "react-firebase-hooks/auth"
-import { Navigate } from "react-router-dom"
+import { Navigate, useLocation } from "react-router-dom"
 import { auth } from "../../../firebase"
 
 const PrivateRoute = ({ children }) => {
     const [user, loading, error] = useAuthState(auth)
+    const location = useLocation()
 
     // Show loading spinner while checking auth state
     if (loading) {
@@ -13,7 +14,9 @@ const PrivateRoute = ({ children }) => {
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900">
                 <div className="flex flex-col items-center space-y-4">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400"></div>
-                    <p className="text-white text-lg">Vérification de l'authentification...</p>
+                    <p className="text-white text-lg">
+                        Vérification de l'authentification...
+                    </p>
                 </div>
             </div>
         )
@@ -36,9 +39,11 @@ const PrivateRoute = ({ children }) => {
         )
     }
 
-    // Redirect to home if not authenticated
+    // Redirect to login if not authenticated, with "from" location
     if (!user) {
-        return <Navigate to="/" replace />
+        return (
+            <Navigate to="/login" state={{ from: location }} replace />
+        )
     }
 
     // Render protected component if authenticated

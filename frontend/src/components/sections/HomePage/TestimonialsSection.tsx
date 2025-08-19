@@ -1,10 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 
 const TestimonialsSection = () => {
     const [isVisible, setIsVisible] = useState(false)
+    const navigate = useNavigate();
 
+    const handleNavigateStart = () => {
+        navigate("/dashboard")
+    }
     useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => {
@@ -190,7 +195,7 @@ const TestimonialsSection = () => {
                             </p>
 
                             <button className="group relative bg-gradient-to-r from-cyan-500 via-purple-500 to-orange-500 text-white font-semibold py-4 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/30 font-mono">
-                                <span className="relative z-10">COMMENCER_MAINTENANT</span>
+                                <span className="relative z-10" onClick={() => handleNavigateStart()}>COMMENCER_MAINTENANT</span>
                                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 via-purple-600 to-orange-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </button>
                         </div>

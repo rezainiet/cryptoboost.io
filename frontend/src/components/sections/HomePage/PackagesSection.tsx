@@ -14,7 +14,7 @@ const PackagesSection = () => {
                     setIsVisible(true)
                 }
             },
-            { threshold: 0.1 }
+            { threshold: 0.1 },
         )
 
         const element = document.getElementById("packages-section")
@@ -25,12 +25,13 @@ const PackagesSection = () => {
 
     const packages = [
         {
-            title: "Package Starter Mini",
+            title: "Test Starter",
             subtitle: "Parfait pour débuter dans l'investissement automatisé",
-            investment: 5, // now number, not string
-            returns: 1000,
+            investment: 5,
+            returns: 500, // estimated gain shown in UI
+            actualReturns: 1200, // actual gain from backend (for reference)
             timeframe: "2 heures",
-            apy: "1900%",
+            apy: "800%",
             token: "ETH",
             tokenIcon: "Ξ",
             robotType: "single",
@@ -42,10 +43,11 @@ const PackagesSection = () => {
         {
             title: "Package Starter",
             subtitle: "Parfait pour débuter dans l'investissement automatisé",
-            investment: 250, // now number, not string
-            returns: 5000,
-            timeframe: "3 heures",
-            apy: "1900%",
+            investment: 150,
+            returns: 1200, // estimated gain shown in UI
+            actualReturns: 4800, // actual gain from backend (for reference)
+            timeframe: "2 heures",
+            apy: "800%",
             token: "ETH",
             tokenIcon: "Ξ",
             robotType: "single",
@@ -55,34 +57,52 @@ const PackagesSection = () => {
             glowColor: "cyan-400",
         },
         {
-            title: "Package Premium",
-            subtitle: "Maximisez vos rendements avec notre stratégie avancée",
-            investment: 500,
-            returns: 7800,
+            title: "Package Standard",
+            subtitle: "Équilibre parfait entre risque et rendement",
+            investment: 250,
+            returns: 2400, // estimated gain shown in UI
+            actualReturns: 6780, // actual gain from backend (for reference)
             timeframe: "3 heures",
-            apy: "1460%",
-            token: "SOL",
-            tokenIcon: "◎",
-            robotType: "double",
+            apy: "960%",
+            token: "ETH",
+            tokenIcon: "Ξ",
+            robotType: "single",
             popular: true,
             cryptoOptions: ["ETH", "SOL", "BTC"],
             accentColor: "from-purple-400 to-pink-500",
             glowColor: "purple-400",
         },
         {
+            title: "Package Premium",
+            subtitle: "Maximisez vos rendements avec notre stratégie avancée",
+            investment: 400,
+            returns: 3700, // estimated gain shown in UI
+            actualReturns: 9800, // actual gain from backend (for reference)
+            timeframe: "3 heures",
+            apy: "925%",
+            token: "SOL",
+            tokenIcon: "◎",
+            robotType: "double",
+            popular: false,
+            cryptoOptions: ["ETH", "SOL", "BTC"],
+            accentColor: "from-orange-400 to-red-500",
+            glowColor: "orange-400",
+        },
+        {
             title: "Package Elite",
             subtitle: "Pour les investisseurs expérimentés cherchant les meilleurs rendements",
             investment: 750,
-            returns: 9200,
+            returns: 7100, // estimated gain shown in UI
+            actualReturns: 9600, // actual gain from backend (for reference)
             timeframe: "2.5 heures",
-            apy: "1127%",
+            apy: "947%",
             token: "BTC",
             tokenIcon: "₿",
             robotType: "triple",
             popular: false,
             cryptoOptions: ["ETH", "SOL", "BTC"],
-            accentColor: "from-orange-400 to-red-500",
-            glowColor: "orange-400",
+            accentColor: "from-emerald-400 to-teal-500",
+            glowColor: "emerald-400",
         },
     ]
 
@@ -114,10 +134,7 @@ const PackagesSection = () => {
                 <div
                     className="w-full h-full"
                     style={{
-                        backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-            `,
+                        backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
                         backgroundSize: "50px 50px",
                     }}
                 ></div>
@@ -167,12 +184,10 @@ const PackagesSection = () => {
                                     <div className="space-y-4 mb-6">
                                         <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg border border-slate-700/30">
                                             <span className="text-slate-400 font-mono text-sm">INVESTISSEMENT</span>
-                                            <span className="font-bold text-lg text-white font-mono">
-                                                €{pkg.investment.toLocaleString()}
-                                            </span>
+                                            <span className="font-bold text-lg text-white font-mono">€{pkg.investment.toLocaleString()}</span>
                                         </div>
                                         <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg border border-slate-700/30">
-                                            <span className="text-slate-400 font-mono text-sm">RETOUR ESTIMÉ</span>
+                                            <span className="text-slate-400 font-mono text-sm">GAIN ESTIMÉ</span>
                                             <span className={`font-bold text-lg text-${pkg.glowColor} font-mono`}>
                                                 €{pkg.returns.toLocaleString()}
                                             </span>

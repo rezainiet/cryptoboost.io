@@ -1,32 +1,29 @@
-"use client"
+import { Routes, Route, Navigate } from "react-router-dom"
+import { AuthProvider } from "./contexts/AuthContext"
+import AdminLogin from "./components/AdminLogin"
+import AdminDashboard from "./components/AdminDashboard"
 
-import { useState } from "react"
-import Sidebar from "./components/sidebar"
-import Header from "./components/header"
-import DashboardContent from "./components/dashboard-content"
+import PrivateRoute from "./components/private-route"
 
-export default function AdminDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen)
-  }
-
+function App() {
   return (
-    <div className="h-screen overflow-hidden bg-slate-900 lg:grid lg:grid-cols-[256px_1fr]">
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
-      {/* Main Content Container */}
-      <div className="flex flex-col h-screen overflow-hidden">
-        {/* Header */}
-        <Header toggleSidebar={toggleSidebar} />
-
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <DashboardContent />
-        </main>
+    <AuthProvider>
+      <div className="min-h-screen bg-slate-900">
+        <Routes>
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/" element={<Navigate to="/admin" replace />} />
+        </Routes>
       </div>
-    </div>
+    </AuthProvider>
   )
 }
+
+export default App

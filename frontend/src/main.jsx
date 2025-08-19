@@ -15,6 +15,8 @@ import Portfolio from "./pages/dashboard/Portfolio.jsx"
 import Transactions from "./pages/dashboard/Transactions.jsx"
 import Settings from "./pages/dashboard/Settings.jsx"
 import PaymentPage from "./pages/PaymentPage.jsx"
+import TermsOfUsePage from "./pages/TermsOfUsePage.jsx"
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx"
 
 // Define the router with nested routes
 const router = createBrowserRouter([
@@ -25,7 +27,19 @@ const router = createBrowserRouter([
       { path: "/", element: <HomePage /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/register", element: <RegisterPage /> },
-      { path: "/payment", element: <PaymentPage /> }, // Added payment route
+      { path: "/terms-conditions", element: <TermsOfUsePage /> },
+      { path: "/privacy-policy", element: <PrivacyPolicyPage /> },
+      {
+        path: "/payment",
+        element: (
+          <PrivateRoute>
+            <PaymentPage />
+          </PrivateRoute>
+        ),
+        children: [
+
+        ],
+      },
       {
         path: "/dashboard",
         element: (
