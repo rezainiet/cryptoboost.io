@@ -12,7 +12,7 @@ const {
     getInvestmentStatsByTimeframe,
     exportUsers,
     exportInvestments,
-} = require("../controllers/adminController")
+} = require("../Controllers/adminController")
 const { getUserCollection } = require("../config/db")
 
 const checkAdminRole = async (req, res, next) => {
