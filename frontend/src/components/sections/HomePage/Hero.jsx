@@ -3,15 +3,16 @@
 import { useState, useEffect } from "react"
 import Navbar from "../../layouts/Navbar"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { auth } from "../../../../firebase"
 import CryptoPrices from "./CryptoPrices"
+import { auth } from "../../../../firebase"
 
 const Hero = () => {
-    const [user] = useAuthState(auth);
+    const [user] = useAuthState(auth)
     const [isVisible, setIsVisible] = useState(false)
 
-
-    useEffect(() => { setIsVisible(true) }, [])
+    useEffect(() => {
+        setIsVisible(true)
+    }, [])
 
     const yieldCards = [
         { percentage: "1400%", detail: "+237.42 €/jour", icon: "E", color: "bg-emerald-400" },
@@ -20,7 +21,7 @@ const Hero = () => {
         { percentage: "123%", detail: "+132.91 USDT/jour", icon: "T", color: "bg-emerald-300" },
         { percentage: "4123%", detail: "+537.32 USDT/jour", icon: "T", color: "bg-teal-300" },
     ]
-    // console.log(user?.email)
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900 relative overflow-hidden">
             <Navbar />
@@ -32,7 +33,7 @@ const Hero = () => {
                     <div
                         className={`transform transition-all duration-1000 font-mono ${isVisible ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"}`}
                     >
-                        <h1 className="hero-title text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
+                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
                             Le Protocole
                             <br />
                             d'Automatisation
@@ -40,7 +41,7 @@ const Hero = () => {
                             des Rendements
                         </h1>
 
-                        <p className="hero-subtitle text-gray-300 text-lg md:text-xl mb-8 max-w-lg">
+                        <p className="text-gray-300 text-lg md:text-xl mb-8 max-w-lg">
                             Les rendements crypto ne sont pas faciles à gérer.
                             <br />
                             Mais Cryptoboost vous fait sentir comme s'ils l'étaient.
@@ -61,128 +62,143 @@ const Hero = () => {
                         </div>
                     </div>
 
-                    {/* Right Content - 3D Robot and Cards */}
-                    <div className="relative flex justify-center items-center min-h-[500px] md:min-h-[600px] lg:min-h-[650px]">
-                        {/* Glowing Sphere Background */}
-                        <div className="absolute inset-0 flex justify-center items-center">
-                            <div className="w-80 h-80 md:w-96 md:h-96 lg:w-[420px] lg:h-[420px] rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 blur-3xl animate-pulse"></div>
+                    {/* Right Content - Self-contained Professional Robot */}
+                    <div className="relative flex justify-center items-center min-h-[300px] sm:min-h-[400px] md:min-h-[500px] lg:min-h-[600px]">
+                        <div
+                            className="absolute inset-0 flex justify-center items-center"
+                            style={{
+                                animation: "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                            }}
+                        >
+                            <div className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full bg-gradient-to-r from-teal-500/10 to-emerald-500/10 blur-2xl"></div>
                         </div>
 
-                        {/* Robot Character - Centered */}
-                        <div className="relative z-20 w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 bg-gradient-to-b from-gray-300 to-gray-600 rounded-full flex items-center justify-center shadow-2xl">
-                            <div className="w-32 h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 bg-gradient-to-b from-gray-800 to-black rounded-full flex items-center justify-center relative">
-                                {/* Robot Eyes */}
-                                <div className="flex space-x-4">
-                                    <div className="w-4 h-4 bg-lime-400 rounded-full animate-pulse shadow-lg shadow-lime-400/50"></div>
-                                    <div className="w-4 h-4 bg-lime-400 rounded-full animate-pulse shadow-lg shadow-lime-400/50"></div>
+                        <div className="relative z-20 group">
+                            {/* Robot Container */}
+                            <div
+                                className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-gradient-to-b from-slate-100 to-slate-300 rounded-2xl flex items-center justify-center shadow-2xl transform transition-all duration-700 hover:scale-105"
+                                style={{
+                                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+                                }}
+                            >
+                                {/* Robot Screen/Face */}
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 bg-gradient-to-b from-slate-800 to-slate-900 rounded-xl flex flex-col items-center justify-center relative overflow-hidden">
+                                    <div
+                                        className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-emerald-400 rounded-full mb-2 shadow-lg"
+                                        style={{
+                                            animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                                            boxShadow: "0 0 20px rgba(52, 211, 153, 0.5)",
+                                        }}
+                                    ></div>
+
+                                    {/* Simple Display Lines */}
+                                    <div className="space-y-1">
+                                        <div className="w-6 h-0.5 sm:w-8 sm:h-0.5 md:w-10 md:h-0.5 bg-teal-400/60 rounded-full"></div>
+                                        <div className="w-4 h-0.5 sm:w-6 sm:h-0.5 md:w-8 md:h-0.5 bg-teal-400/40 rounded-full"></div>
+                                        <div className="w-5 h-0.5 sm:w-7 sm:h-0.5 md:w-9 md:h-0.5 bg-teal-400/30 rounded-full"></div>
+                                    </div>
+
+                                    <div
+                                        className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-400/5 to-transparent h-0.5"
+                                        style={{
+                                            animation: "pulse 3s ease-in-out infinite",
+                                        }}
+                                    ></div>
                                 </div>
 
-                                {/* Robot Body Details */}
-                                <div className="absolute bottom-4 w-8 h-6 bg-gradient-to-b from-gray-600 to-gray-800 rounded"></div>
+                                {/* Simple Base */}
+                                <div className="absolute -bottom-2 sm:-bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2 w-8 h-3 sm:w-10 sm:h-4 md:w-12 md:h-5 bg-gradient-to-b from-slate-200 to-slate-400 rounded-lg shadow-lg">
+                                    <div
+                                        className="absolute top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 sm:w-1.5 sm:h-1.5 bg-emerald-400 rounded-full"
+                                        style={{
+                                            animation: "pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                                        }}
+                                    ></div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Floating Yield Cards - Desktop & Tablet */}
+                        {/* Desktop & Tablet Cards - More organized positioning */}
                         <div className="hidden md:block absolute inset-0">
-                            {/* Top Cards */}
+                            {/* Top Card */}
                             <div
-                                className={`absolute top-8 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-10 opacity-0"}`}
-                                style={{ animationDelay: "0ms" }}
+                                className={`absolute top-4 lg:top-8 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-lg transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-10 opacity-0"}`}
                             >
-                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                <div className="flex items-center space-x-3">
                                     <div
-                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[0].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                        className={`w-8 h-8 ${yieldCards[0].color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
                                     >
                                         {yieldCards[0].icon}
                                     </div>
                                     <div>
-                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[0].percentage}</div>
+                                        <div className="font-bold text-gray-800 text-lg">{yieldCards[0].percentage}</div>
                                         <div className="text-gray-600 text-xs">{yieldCards[0].detail}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Top Right Card */}
+                            {/* Left Card */}
                             <div
-                                className={`absolute top-16 right-4 lg:right-8 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-10 opacity-0"}`}
-                                style={{ animationDelay: "200ms" }}
+                                className={`absolute top-1/2 left-2 lg:left-8 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-lg transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"}`}
+                                style={{ transitionDelay: "200ms" }}
                             >
-                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                <div className="flex items-center space-x-3">
                                     <div
-                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[1].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                        className={`w-8 h-8 ${yieldCards[1].color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
                                     >
                                         {yieldCards[1].icon}
                                     </div>
                                     <div>
-                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[1].percentage}</div>
+                                        <div className="font-bold text-gray-800 text-lg">{yieldCards[1].percentage}</div>
                                         <div className="text-gray-600 text-xs">{yieldCards[1].detail}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Middle Left Card */}
+                            {/* Right Card */}
                             <div
-                                className={`absolute top-1/2 left-2 lg:left-4 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-10 opacity-0"}`}
-                                style={{ animationDelay: "400ms" }}
+                                className={`absolute top-1/2 right-2 lg:right-8 transform -translate-y-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-lg transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-x-0 opacity-100" : "translate-x-10 opacity-0"}`}
+                                style={{ transitionDelay: "400ms" }}
                             >
-                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                <div className="flex items-center space-x-3">
                                     <div
-                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[2].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                        className={`w-8 h-8 ${yieldCards[2].color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
                                     >
                                         {yieldCards[2].icon}
                                     </div>
                                     <div>
-                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[2].percentage}</div>
+                                        <div className="font-bold text-gray-800 text-lg">{yieldCards[2].percentage}</div>
                                         <div className="text-gray-600 text-xs">{yieldCards[2].detail}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Bottom Left Card */}
+                            {/* Bottom Card */}
                             <div
-                                className={`absolute bottom-16 left-8 lg:left-12 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-                                style={{ animationDelay: "600ms" }}
+                                className={`absolute bottom-4 lg:bottom-8 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-lg transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+                                style={{ transitionDelay: "600ms" }}
                             >
-                                <div className="flex items-center space-x-2 lg:space-x-3">
+                                <div className="flex items-center space-x-3">
                                     <div
-                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[3].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
+                                        className={`w-8 h-8 ${yieldCards[3].color} rounded-full flex items-center justify-center text-white font-bold text-sm`}
                                     >
                                         {yieldCards[3].icon}
                                     </div>
                                     <div>
-                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[3].percentage}</div>
+                                        <div className="font-bold text-gray-800 text-lg">{yieldCards[3].percentage}</div>
                                         <div className="text-gray-600 text-xs">{yieldCards[3].detail}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Bottom Right Card */}
-                            <div
-                                className={`absolute bottom-8 right-12 lg:right-16 bg-white/95 backdrop-blur-sm rounded-xl p-3 lg:p-4 shadow-xl transition-all duration-1000 hover:scale-105 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-                                style={{ animationDelay: "800ms" }}
-                            >
-                                <div className="flex items-center space-x-2 lg:space-x-3">
-                                    <div
-                                        className={`w-7 h-7 lg:w-8 lg:h-8 ${yieldCards[4].color} rounded-full flex items-center justify-center text-white font-bold text-xs lg:text-sm`}
-                                    >
-                                        {yieldCards[4].icon}
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-gray-800 text-base lg:text-lg">{yieldCards[4].percentage}</div>
-                                        <div className="text-gray-600 text-xs">{yieldCards[4].detail}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Mobile Yield Cards - Stacked below robot */}
-                        <div className="md:hidden absolute -bottom-24 left-0 right-0 px-4">
+                        <div className="md:hidden absolute -bottom-12 sm:-bottom-16 left-0 right-0 px-4">
                             <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
                                 {yieldCards.slice(0, 4).map((card, index) => (
                                     <div
                                         key={index}
-                                        className={`bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-xl transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-                                        style={{ animationDelay: `${index * 150}ms` }}
+                                        className={`bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-lg transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+                                        style={{ transitionDelay: `${index * 150}ms` }}
                                     >
                                         <div className="flex items-center space-x-2">
                                             <div
@@ -190,7 +206,7 @@ const Hero = () => {
                                             >
                                                 {card.icon}
                                             </div>
-                                            <div>
+                                            <div className="min-w-0 flex-1">
                                                 <div className="font-bold text-gray-800 text-sm">{card.percentage}</div>
                                                 <div className="text-gray-600 text-xs truncate">{card.detail}</div>
                                             </div>
@@ -229,7 +245,6 @@ const Hero = () => {
                     </div>
                 </div>
             </div>
-
         </div>
     )
 }

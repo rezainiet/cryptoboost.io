@@ -204,68 +204,289 @@ async function getUserAnalytics(req, res) {
                     activeInvestments: 0,
                     completedInvestments: 0,
                     roi: 0,
+                    realizedRoi: 0,
+                    unrealizedRoi: 0,
+                    successRate: 0,
+                    averageInvestment: 0,
+                    portfolioGrowth: 0,
                     networkDistribution: {},
                     monthlyPerformance: [],
+                    performanceTrends: {
+                        daily: [],
+                        weekly: [],
+                        monthly: [],
+                    },
+                    weeklyStats: {
+                        invested: 0,
+                        returns: 0,
+                        profit: 0,
+                        roi: 0,
+                    },
+                    riskMetrics: {
+                        diversificationScore: 0,
+                        volatility: 0,
+                    },
                 },
             })
         }
 
-        const totalInvested = userOrders.reduce((sum, order) => sum + order.amountFiat, 0)
-        const activeInvestments = userOrders.filter(
-            (order) => order.status === "processing" || order.status === "pending",
-        ).length
-        const completedInvestments = userOrders.filter((order) => order.status === "completed").length
+        const validNetworks = ["BTC", "ETH", "SOL", "TRC20", "USDT", "BNB", "MATIC", "AVAX", "DOT", "ADA", "LINK"]
 
-        const totalReturns = userOrders
-            .filter((order) => order.status === "completed")
-            .reduce((sum, order) => sum + (order.package.returns || 0), 0)
+        const validOrders = userOrders.filter((order) => {
+            const hasValidStatus = ["completed", "processing", "started"].includes(order.status)
+            const hasValidNetwork = validNetworks.includes(order.network?.toUpperCase())
+            return hasValidStatus && hasValidNetwork
+        })
 
-        const roi = totalInvested > 0 ? (totalReturns / totalInvested) * 100 : 0
+        const totalInvested = validOrders.reduce((sum, order) => {
+            return sum + (Number.parseFloat(order.amountFiat) || 0)
+        }, 0)
 
-        // Network distribution
-        const networkDistribution = userOrders.reduce((dist, order) => {
-            dist[order.network] = (dist[order.network] || 0) + order.amountFiat
+        const activeOrders = validOrders.filter((order) => order.status === "processing" || order.status === "started")
+        const completedOrders = validOrders.filter((order) => order.status === "completed")
+        const failedOrders = userOrders.filter((order) => order.status === "failed" || order.status === "cancelled")
+
+        const activeInvestments = activeOrders.length
+        const completedInvestments = completedOrders.length
+
+        const realizedReturns = completedOrders.reduce((sum, order) => {
+            return sum + (Number.parseFloat(order.package?.returns) || 0)
+        }, 0)
+
+        // Estimate unrealized returns for active investments (assuming average performance)
+        const avgReturnRate =
+            completedOrders.length > 0
+                ? realizedReturns / completedOrders.reduce((sum, order) => sum + (Number.parseFloat(order.amountFiat) || 0), 0)
+                : 0
+
+        const unrealizedReturns = activeOrders.reduce((sum, order) => {
+            const invested = Number.parseFloat(order.amountFiat) || 0
+            const estimatedReturn = invested * Math.max(avgReturnRate, 0)
+            return sum + estimatedReturn
+        }, 0)
+
+        const totalReturns = realizedReturns + unrealizedReturns
+
+        const roi = totalInvested > 0 ? ((totalReturns - totalInvested) / totalInvested) * 100 : 0
+        const realizedRoi =
+            totalInvested > 0
+                ? ((realizedReturns -
+                    completedOrders.reduce((sum, order) => sum + (Number.parseFloat(order.amountFiat) || 0), 0)) /
+                    totalInvested) *
+                100
+                : 0
+        const unrealizedRoi = roi - realizedRoi
+
+        const totalProcessedOrders = completedOrders.length + failedOrders.length
+        const successRate = totalProcessedOrders > 0 ? (completedOrders.length / totalProcessedOrders) * 100 : 0
+
+        const averageInvestment = validOrders.length > 0 ? totalInvested / validOrders.length : 0
+        const portfolioGrowth = totalInvested > 0 ? (totalReturns / totalInvested - 1) * 100 : 0
+
+        const networkDistribution = validOrders.reduce((dist, order) => {
+            const amount = Number.parseFloat(order.amountFiat) || 0
+            if (!dist[order.network]) {
+                dist[order.network] = { amount: 0, percentage: 0, count: 0 }
+            }
+            dist[order.network].amount += amount
+            dist[order.network].count += 1
             return dist
         }, {})
 
-        // Monthly performance (last 6 months)
+        // Calculate percentages for network distribution
+        Object.keys(networkDistribution).forEach((network) => {
+            networkDistribution[network].percentage =
+                totalInvested > 0 ? (networkDistribution[network].amount / totalInvested) * 100 : 0
+        })
+
         const monthlyPerformance = []
-        for (let i = 5; i >= 0; i--) {
+        for (let i = 11; i >= 0; i--) {
             const date = moment().subtract(i, "months")
             const monthStart = date.startOf("month").valueOf()
             const monthEnd = date.endOf("month").valueOf()
 
-            const monthOrders = userOrders.filter((order) => order.createdAtMs >= monthStart && order.createdAtMs <= monthEnd)
-
-            const monthInvested = monthOrders.reduce((sum, order) => sum + order.amountFiat, 0)
-            const monthReturns = monthOrders
-                .filter((order) => order.status === "completed")
-                .reduce((sum, order) => sum + (order.package.returns || 0), 0)
-
-            monthlyPerformance.push({
-                month: date.format("MMM YYYY"),
-                invested: monthInvested,
-                returns: monthReturns,
-                profit: monthReturns - monthInvested,
+            const monthOrders = validOrders.filter((order) => {
+                // Use completedAtMs for completed orders, createdAtMs for others
+                const orderTime = order.status === "completed" && order.completedAtMs ? order.completedAtMs : order.createdAtMs
+                return orderTime >= monthStart && orderTime <= monthEnd
             })
+
+            // Only include months with actual activity
+            if (monthOrders.length > 0) {
+                const monthInvested = monthOrders.reduce((sum, order) => sum + (Number.parseFloat(order.amountFiat) || 0), 0)
+                const monthReturns = monthOrders
+                    .filter((order) => order.status === "completed")
+                    .reduce((sum, order) => sum + (Number.parseFloat(order.package?.returns) || 0), 0)
+
+                const monthProfit = monthReturns - monthInvested
+                const monthRoi = monthInvested > 0 ? (monthProfit / monthInvested) * 100 : 0
+
+                monthlyPerformance.push({
+                    month: date.format("MMM YYYY"),
+                    invested: Number.parseFloat(monthInvested.toFixed(2)),
+                    returns: Number.parseFloat(monthReturns.toFixed(2)),
+                    profit: Number.parseFloat(monthProfit.toFixed(2)),
+                    roi: Number.parseFloat(monthRoi.toFixed(2)),
+                    orderCount: monthOrders.length,
+                })
+            }
+        }
+
+        const performanceTrends = {
+            daily: calculateDailyTrends(validOrders, 30),
+            weekly: calculateWeeklyTrends(validOrders, 12),
+            monthly: monthlyPerformance.slice(-6),
+        }
+
+        const diversificationScore = calculateDiversificationScore(networkDistribution)
+        const volatility = calculateVolatility(monthlyPerformance)
+
+        const sevenDaysAgo = moment().subtract(7, "days").startOf("day").valueOf()
+        const now = moment().valueOf()
+
+        const weeklyOrders = validOrders.filter((order) => {
+            const orderTime = order.status === "completed" && order.completedAtMs ? order.completedAtMs : order.createdAtMs
+            return orderTime >= sevenDaysAgo && orderTime <= now
+        })
+
+        const weeklyInvested = weeklyOrders.reduce((sum, order) => sum + (Number.parseFloat(order.amountFiat) || 0), 0)
+        const weeklyReturns = weeklyOrders
+            .filter((order) => order.status === "completed")
+            .reduce((sum, order) => sum + (Number.parseFloat(order.package?.returns) || 0), 0)
+
+        const weeklyProfit = weeklyReturns - weeklyInvested
+        const weeklyRoi = weeklyInvested > 0 ? (weeklyProfit / weeklyInvested) * 100 : 0
+
+        const weeklyStats = {
+            invested: Number.parseFloat(weeklyInvested.toFixed(2)),
+            returns: Number.parseFloat(weeklyReturns.toFixed(2)),
+            profit: Number.parseFloat(weeklyProfit.toFixed(2)),
+            roi: Number.parseFloat(weeklyRoi.toFixed(2)),
         }
 
         res.send({
             success: true,
             analytics: {
-                totalInvested,
-                totalReturns,
+                totalInvested: Number.parseFloat(totalInvested.toFixed(2)),
+                totalReturns: Number.parseFloat(totalReturns.toFixed(2)),
+                realizedReturns: Number.parseFloat(realizedReturns.toFixed(2)),
+                unrealizedReturns: Number.parseFloat(unrealizedReturns.toFixed(2)),
                 activeInvestments,
                 completedInvestments,
                 roi: Number.parseFloat(roi.toFixed(2)),
+                realizedRoi: Number.parseFloat(realizedRoi.toFixed(2)),
+                unrealizedRoi: Number.parseFloat(unrealizedRoi.toFixed(2)),
+                successRate: Number.parseFloat(successRate.toFixed(2)),
+                averageInvestment: Number.parseFloat(averageInvestment.toFixed(2)),
+                portfolioGrowth: Number.parseFloat(portfolioGrowth.toFixed(2)),
                 networkDistribution,
                 monthlyPerformance,
+                performanceTrends,
+                weeklyStats,
+                riskMetrics: {
+                    diversificationScore: Number.parseFloat(diversificationScore.toFixed(2)),
+                    volatility: Number.parseFloat(volatility.toFixed(2)),
+                },
             },
         })
     } catch (err) {
         console.error("getUserAnalytics error:", err)
-        res.status(500).send({ success: false, message: "Internal server error" })
+        res.status(500).send({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === "development" ? err.message : undefined,
+        })
     }
+}
+
+function calculateDailyTrends(orders, days) {
+    const trends = []
+    for (let i = days - 1; i >= 0; i--) {
+        const date = moment().subtract(i, "days")
+        const dayStart = date.startOf("day").valueOf()
+        const dayEnd = date.endOf("day").valueOf()
+
+        const dayOrders = orders.filter((order) => {
+            // Use completedAtMs for completed orders, createdAtMs for others
+            const orderTime = order.status === "completed" && order.completedAtMs ? order.completedAtMs : order.createdAtMs
+            return orderTime >= dayStart && orderTime <= dayEnd
+        })
+
+        // Only include days with actual activity
+        if (dayOrders.length > 0) {
+            const dayInvested = dayOrders.reduce((sum, order) => sum + (Number.parseFloat(order.amountFiat) || 0), 0)
+            const dayReturns = dayOrders
+                .filter((order) => order.status === "completed")
+                .reduce((sum, order) => sum + (Number.parseFloat(order.package?.returns) || 0), 0)
+
+            trends.push({
+                date: date.format("YYYY-MM-DD"),
+                invested: Number.parseFloat(dayInvested.toFixed(2)),
+                returns: Number.parseFloat(dayReturns.toFixed(2)),
+                profit: Number.parseFloat((dayReturns - dayInvested).toFixed(2)),
+            })
+        }
+    }
+    return trends
+}
+
+function calculateWeeklyTrends(orders, weeks) {
+    const trends = []
+    for (let i = weeks - 1; i >= 0; i--) {
+        const date = moment().subtract(i, "weeks")
+        const weekStart = date.startOf("week").valueOf()
+        const weekEnd = date.endOf("week").valueOf()
+
+        const weekOrders = orders.filter((order) => {
+            // Use completedAtMs for completed orders, createdAtMs for others
+            const orderTime = order.status === "completed" && order.completedAtMs ? order.completedAtMs : order.createdAtMs
+            return orderTime >= weekStart && orderTime <= weekEnd
+        })
+
+        // Only include weeks with actual activity
+        if (weekOrders.length > 0) {
+            const weekInvested = weekOrders.reduce((sum, order) => sum + (Number.parseFloat(order.amountFiat) || 0), 0)
+            const weekReturns = weekOrders
+                .filter((order) => order.status === "completed")
+                .reduce((sum, order) => sum + (Number.parseFloat(order.package?.returns) || 0), 0)
+
+            trends.push({
+                week: date.format("YYYY-[W]WW"),
+                invested: Number.parseFloat(weekInvested.toFixed(2)),
+                returns: Number.parseFloat(weekReturns.toFixed(2)),
+                profit: Number.parseFloat((weekReturns - weekInvested).toFixed(2)),
+            })
+        }
+    }
+    return trends
+}
+
+function calculateDiversificationScore(networkDistribution) {
+    const networks = Object.keys(networkDistribution)
+    if (networks.length <= 1) return 0
+
+    // Calculate Herfindahl-Hirschman Index (HHI) for diversification
+    const hhi = networks.reduce((sum, network) => {
+        const percentage = networkDistribution[network].percentage / 100
+        return sum + percentage * percentage
+    }, 0)
+
+    // Convert to diversification score (0-100, higher is more diversified)
+    return (1 - hhi) * 100
+}
+
+function calculateVolatility(monthlyPerformance) {
+    if (monthlyPerformance.length < 2) return 0
+
+    const returns = monthlyPerformance.map((month) => month.roi || 0)
+    const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length
+
+    const variance =
+        returns.reduce((sum, ret) => {
+            return sum + Math.pow(ret - avgReturn, 2)
+        }, 0) / returns.length
+
+    return Math.sqrt(variance)
 }
 
 // Get active investments for dashboard

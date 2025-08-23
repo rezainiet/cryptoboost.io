@@ -1,9 +1,9 @@
-const { getOrdersCollection } = require("../config/db")
+const { getOrdersCollection, getUserCollection } = require("../config/db")
 const moment = require("moment")
 
 const orders = getOrdersCollection()
+const users = getUserCollection()
 
-// Generate random transaction hash
 function generateRandomHash() {
     const chars = "0123456789abcdef"
     let hash = "0x"
@@ -13,7 +13,29 @@ function generateRandomHash() {
     return hash
 }
 
-// Add trading hash to order
+function parseTimeframeToHours(timeframe) {
+    if (typeof timeframe === "number") {
+        return timeframe
+    }
+
+    if (typeof timeframe === "string") {
+        // Extract numeric value from strings like "2 heures", "2.5 heures", "3 heures"
+        const match = timeframe.match(/(\d+(?:\.\d+)?)\s*heures?/i)
+        if (match) {
+            return Number.parseFloat(match[1])
+        }
+
+        // Try to parse as plain number string
+        const numericValue = Number.parseFloat(timeframe)
+        if (!isNaN(numericValue)) {
+            return numericValue
+        }
+    }
+
+    // Default fallback
+    return 3
+}
+
 async function addTradingHashToOrder(orderId, hash) {
     try {
         const result = await orders.findOneAndUpdate(
@@ -41,7 +63,64 @@ async function addTradingHashToOrder(orderId, hash) {
     }
 }
 
-// Process all started orders and generate hashes
+async function completeOrder(orderId) {
+    try {
+        const order = await orders.findOne({ orderId, status: "started" })
+        if (!order) {
+            console.log(`[HashGenerator] Order ${orderId} not found or not in started status`)
+            return null
+        }
+
+        // Update order status to completed
+        const result = await orders.findOneAndUpdate(
+            { orderId, status: "started" },
+            {
+                $set: {
+                    status: "completed",
+                    completedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+                    completedAtMs: Date.now(),
+                },
+            },
+            { returnDocument: "after" },
+        )
+
+        if (result.value) {
+            console.log(`[HashGenerator] Order ${orderId} marked as completed`)
+
+            const userUpdateResult = await users.findOneAndUpdate(
+                { email: order.userEmail },
+                {
+                    $inc: {
+                        balance: order.package.returns, // Add returns to user balance
+                    },
+                    $push: {
+                        activityLogs: {
+                            action: "investment_completed",
+                            timestamp: moment().format("YYYY-MM-DD HH:mm:ss"),
+                            details: {
+                                orderId: orderId,
+                                amount: order.amountFiat,
+                                returns: order.package.returns,
+                                package: order.package.title,
+                            },
+                        },
+                    },
+                },
+                { returnDocument: "after" },
+            )
+
+            if (userUpdateResult.value) {
+                console.log(`[HashGenerator] Updated balance for user ${order.userEmail}: +€${order.package.returns}`)
+            }
+        }
+
+        return result.value
+    } catch (err) {
+        console.error(`[HashGenerator] Error completing order ${orderId}:`, err)
+        return null
+    }
+}
+
 async function processStartedOrders() {
     try {
         const startedOrders = await orders.find({ status: "started" }).toArray()
@@ -57,17 +136,23 @@ async function processStartedOrders() {
             if (order.startedAt) {
                 const startedTime = moment(order.startedAt, "YYYY-MM-DD HH:mm:ss")
                 const currentTime = moment()
-                const packageDurationHours = 3 // 3 hours package timeframe
 
-                // Check if 3 hours have elapsed since start
+                const rawTimeframe = order.package?.duration || order.package?.timeframe || 3
+                const packageDurationHours = parseTimeframeToHours(rawTimeframe)
+
+                console.log(
+                    `[HashGenerator] Order ${order.orderId} duration: ${packageDurationHours} hours (from: ${rawTimeframe})`,
+                )
+
                 if (currentTime.diff(startedTime, "hours", true) >= packageDurationHours) {
-                    console.log(`[HashGenerator] Order ${order.orderId} has reached completion time, marking as completed`)
+                    console.log(
+                        `[HashGenerator] Order ${order.orderId} has reached completion time (${packageDurationHours}h), marking as completed`,
+                    )
                     await completeOrder(order.orderId)
                     continue // Skip hash generation for completed order
                 }
             }
 
-            // Generate hash only for orders that haven't reached completion time
             const hash = generateRandomHash()
             await addTradingHashToOrder(order.orderId, hash)
 
@@ -79,7 +164,6 @@ async function processStartedOrders() {
     }
 }
 
-// Start the hash generation service
 function startHashGeneratorService() {
     console.log("[HashGenerator] Starting hash generation service...")
 
@@ -105,32 +189,7 @@ function startHashGeneratorService() {
     })
 
     console.log("[HashGenerator] Hash generation service started successfully")
-}
-
-// Stop hash generation for completed orders
-async function completeOrder(orderId) {
-    try {
-        const result = await orders.findOneAndUpdate(
-            { orderId, status: "started" },
-            {
-                $set: {
-                    status: "completed",
-                    completedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
-                    completedAtMs: Date.now(),
-                },
-            },
-            { returnDocument: "after" },
-        )
-
-        if (result.value) {
-            console.log(`[HashGenerator] Order ${orderId} marked as completed`)
-        }
-
-        return result.value
-    } catch (err) {
-        console.error(`[HashGenerator] Error completing order ${orderId}:`, err)
-        return null
-    }
+    return interval
 }
 
 module.exports = {
@@ -139,4 +198,5 @@ module.exports = {
     addTradingHashToOrder,
     processStartedOrders,
     completeOrder,
+    parseTimeframeToHours,
 }
