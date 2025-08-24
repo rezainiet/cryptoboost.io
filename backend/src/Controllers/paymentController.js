@@ -497,28 +497,68 @@ async function getActiveInvestments(req, res) {
         const activeOrders = await orders
             .find({
                 userEmail: email,
-                status: { $in: ["pending", "processing"] },
+                status: { $in: ["started"] },
             })
             .sort({ createdAtMs: -1 })
             .toArray()
+
+        // Function to parse timeframe strings like "2 heures", "3 heures"
+        function parseTimeframeToHours(timeframe) {
+            if (typeof timeframe === "number") return timeframe
+            if (typeof timeframe === "string") {
+                const match = timeframe.match(/(\d+(?:\.\d+)?)\s*(?:heures?|hours?|h)/i)
+                if (match) return Number.parseFloat(match[1])
+            }
+            return 3 // Default fallback
+        }
+
+        // Function to calculate progress based on elapsed time vs total timeframe
+        function calculateProgress(order) {
+            // Only calculate progress for started orders
+            if (order.status !== "started" || !order.startedAt) {
+                return order.status === "processing" ? 10 : 0
+            }
+
+            try {
+                // Parse start time
+                const startTime = moment(order.startedAt, "YYYY-MM-DD HH:mm:ss").valueOf()
+                const currentTime = Date.now()
+                const elapsedMs = currentTime - startTime
+
+                // Get package duration in hours
+                const packageDurationHours = parseTimeframeToHours(order.package?.timeframe || order.package?.duration)
+                const totalDurationMs = packageDurationHours * 60 * 60 * 1000
+
+                // Calculate progress percentage
+                const progressPercent = Math.min(100, Math.max(0, (elapsedMs / totalDurationMs) * 100))
+
+                return Math.round(progressPercent)
+            } catch (error) {
+                console.error("Error calculating progress:", error)
+                return 25 // Fallback progress
+            }
+        }
 
         const enrichedOrders = activeOrders.map((order) => {
             const now = Date.now()
             const timeRemaining = order.expiresAt - now
             const isExpired = timeRemaining <= 0
 
-            // Calculate expected completion time (3 hours after payment confirmation)
             let expectedCompletion = null
-            if (order.status === "processing" && order.txHash) {
-                expectedCompletion = order.createdAtMs + 3 * 60 * 60 * 1000 // 3 hours
+            if (order.status === "started" && order.startedAt) {
+                const packageDurationHours = parseTimeframeToHours(order.package?.timeframe || order.package?.duration)
+                const startTime = moment(order.startedAt, "YYYY-MM-DD HH:mm:ss").valueOf()
+                expectedCompletion = startTime + packageDurationHours * 60 * 60 * 1000
             }
+
+            const progress = calculateProgress(order)
 
             return {
                 ...order,
                 timeRemaining: Math.max(0, timeRemaining),
                 isExpired,
                 expectedCompletion,
-                progress: order.status === "processing" ? 50 : 25, // Simple progress indicator
+                progress, // Dynamic progress based on actual elapsed time
             }
         })
 

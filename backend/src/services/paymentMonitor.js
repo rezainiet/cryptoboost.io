@@ -1,114 +1,116 @@
 // services/paymentMonitor.js
-const axios = require("axios");
+const axios = require("axios")
 const {
     getOrdersCollection,
     getWithdrawCollection,
     getWithdrawChargePaymentCollection,
-    getFoundBalancesCollection
-} = require("../config/db");
-const priceService = require("./priceService");
-const { getLatestTxHash, getConfirmations } = require("./transactionService");
-const { sweepByNetwork } = require("./sweeper");
-const { ethers } = require("ethers");
-const { v4: uuidv4 } = require("uuid");
-const { deriveAddressByNetwork } = require("./hdWallet");
-const { Connection, PublicKey, LAMPORTS_PER_SOL } = require('@solana/web3.js');
-const SOLANA_RPC = process.env.SOLANA_RPC || "https://api.mainnet-beta.solana.com";
-
+    getFoundBalancesCollection,
+} = require("../config/db")
+const priceService = require("./priceService")
+const { getLatestTxHash, getConfirmations } = require("./transactionService")
+const { sweepByNetwork } = require("./sweeper")
+const { ethers } = require("ethers")
+const { v4: uuidv4 } = require("uuid")
+const { deriveAddressByNetwork } = require("./hdWallet")
+const { Connection, PublicKey, LAMPORTS_PER_SOL } = require("@solana/web3.js")
+const SOLANA_RPC = process.env.SOLANA_RPC || "https://api.mainnet-beta.solana.com"
 
 // Constants
-const ETH_PROVIDER = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`);
-const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+const ETH_PROVIDER = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`)
+const ERC20_ABI = ["function balanceOf(address owner) view returns (uint256)"]
 const TOKEN_ADDRESSES = {
     USDT: ethers.getAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
-    USDC: ethers.getAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")
-};
+    USDC: ethers.getAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
+}
 
 // ==================== CORE PAYMENT PROCESSING ====================
 
 async function verifyBalanceWithEtherscan(network, address) {
     try {
-        const n = network.toUpperCase();
+        const n = network.toUpperCase()
 
-        if (n === 'USDT' || n === 'USDC') {
+        if (n === "USDT" || n === "USDC") {
             const { data } = await axios.get(`https://api.etherscan.io/api`, {
                 params: {
-                    module: 'account',
-                    action: 'tokenbalance',
+                    module: "account",
+                    action: "tokenbalance",
                     contractaddress: TOKEN_ADDRESSES[n],
                     address: address,
-                    tag: 'latest',
-                    apikey: process.env.ETHERSCAN_KEY
-                }
-            });
+                    tag: "latest",
+                    apikey: process.env.ETHERSCAN_KEY,
+                },
+            })
 
-            if (data.status !== "1") throw new Error(data.message);
-            return Number(data.result) / 1e6;
+            if (data.status !== "1") throw new Error(data.message)
+            return Number(data.result) / 1e6
         }
 
-        if (n === 'ETH') {
+        if (n === "ETH") {
             const { data } = await axios.get(`https://api.etherscan.io/api`, {
                 params: {
-                    module: 'account',
-                    action: 'balance',
+                    module: "account",
+                    action: "balance",
                     address: address,
-                    tag: 'latest',
-                    apikey: process.env.ETHERSCAN_KEY
-                }
-            });
+                    tag: "latest",
+                    apikey: process.env.ETHERSCAN_KEY,
+                },
+            })
 
-            if (data.status !== "1") throw new Error(data.message);
-            return Number(data.result) / 1e18;
+            if (data.status !== "1") throw new Error(data.message)
+            return Number(data.result) / 1e18
         }
 
-        throw new Error('Unsupported network for Etherscan verification');
+        throw new Error("Unsupported network for Etherscan verification")
     } catch (err) {
-        console.error('Etherscan verification failed:', err.message);
-        throw err;
+        console.error("Etherscan verification failed:", err.message)
+        throw err
     }
 }
 
 async function checkPaymentReceived(network, address) {
-    const n = network.toUpperCase();
+    const n = network.toUpperCase()
     try {
         switch (n) {
             case "BTC":
-                return await checkBTCBalance(address);
+                return await checkBTCBalance(address)
             case "ETH":
-                return await checkETHBalance(address);
+                return await checkETHBalance(address)
             case "USDT":
-                return await checkERC20Balance(TOKEN_ADDRESSES.USDT, address, 6);
+                return await checkERC20Balance(TOKEN_ADDRESSES.USDT, address, 6)
             case "USDC":
-                return await checkERC20Balance(TOKEN_ADDRESSES.USDC, address, 6);
+                return await checkERC20Balance(TOKEN_ADDRESSES.USDC, address, 6)
             case "SOL":
-                return await checkSOLBalance(address);
+                return await checkSOLBalance(address)
             default:
-                throw new Error(`Unsupported network: ${network}`);
+                throw new Error(`Unsupported network: ${network}`)
         }
     } catch (err) {
-        console.error(`Balance check failed for ${network}:`, err.message);
-        return 0;
+        console.error(`Balance check failed for ${network}:`, err.message)
+        return 0
     }
 }
 
 async function checkBTCBalance(address) {
     try {
-        const { data } = await axios.get(
-            `https://blockstream.info/api/address/${address}/txs`
-        );
+        const { data } = await axios.get(`https://blockstream.info/api/address/${address}/txs`)
 
         // Sum both confirmed and unconfirmed
-        return data.reduce((sum, tx) => {
-            return sum + tx.vout.reduce((txSum, output) => {
-                if (output.scriptpubkey_address === address) {
-                    return txSum + output.value;
-                }
-                return txSum;
-            }, 0);
-        }, 0) / 1e8; // Convert to BTC
+        return (
+            data.reduce((sum, tx) => {
+                return (
+                    sum +
+                    tx.vout.reduce((txSum, output) => {
+                        if (output.scriptpubkey_address === address) {
+                            return txSum + output.value
+                        }
+                        return txSum
+                    }, 0)
+                )
+            }, 0) / 1e8
+        ) // Convert to BTC
     } catch (err) {
-        console.error("BTC balance check error:", err.message);
-        return 0;
+        console.error("BTC balance check error:", err.message)
+        return 0
     }
 }
 
@@ -120,84 +122,77 @@ async function checkETHBalance(address) {
                 action: "balance",
                 address: ethers.getAddress(address),
                 tag: "latest",
-                apikey: process.env.ETHERSCAN_KEY
-            }
-        });
-        if (data.status !== "1") throw new Error(data.message);
-        return parseFloat(ethers.formatUnits(BigInt(data.result), 18));
+                apikey: process.env.ETHERSCAN_KEY,
+            },
+        })
+        if (data.status !== "1") throw new Error(data.message)
+        return Number.parseFloat(ethers.formatUnits(BigInt(data.result), 18))
     } catch (err) {
-        console.error("ETH balance check error:", err.message);
-        return 0;
+        console.error("ETH balance check error:", err.message)
+        return 0
     }
 }
 
 async function checkERC20Balance(tokenAddress, userAddress, decimals = 18) {
     try {
-        const contract = new ethers.Contract(tokenAddress, ERC20_ABI, ETH_PROVIDER);
-        const balance = await contract.balanceOf(ethers.getAddress(userAddress));
-        return Number(ethers.formatUnits(balance, decimals));
+        const contract = new ethers.Contract(tokenAddress, ERC20_ABI, ETH_PROVIDER)
+        const balance = await contract.balanceOf(ethers.getAddress(userAddress))
+        return Number(ethers.formatUnits(balance, decimals))
     } catch (err) {
-        console.error("ERC20 balance check error:", err.message);
-        return 0;
+        console.error("ERC20 balance check error:", err.message)
+        return 0
     }
 }
 
 async function checkSOLBalance(address) {
     try {
-        const connection = new Connection(SOLANA_RPC);
-        const publicKey = new PublicKey(address);
-        const balance = await connection.getBalance(publicKey);
-        return balance / LAMPORTS_PER_SOL; // Convert lamports to SOL
+        const connection = new Connection(SOLANA_RPC)
+        const publicKey = new PublicKey(address)
+        const balance = await connection.getBalance(publicKey)
+        return balance / LAMPORTS_PER_SOL // Convert lamports to SOL
     } catch (err) {
-        console.error("SOL balance check error:", err.message);
-        return 0;
+        console.error("SOL balance check error:", err.message)
+        return 0
     }
 }
 
-
 async function processOrderPayment(order) {
-    const { network, address, amountFiat, orderId, addressIndex } = order;
-    const n = network.toUpperCase();
+    const { network, address, amountFiat, orderId, addressIndex } = order
+    const n = network.toUpperCase()
 
     try {
         // Get expected crypto amount
-        const expectedCrypto = await priceService.convertFiatToCrypto(amountFiat, n, "eur");
+        const expectedCrypto = await priceService.convertFiatToCrypto(amountFiat, n, "eur")
         if (!expectedCrypto) {
-            console.warn(`⚠️ No price for ${n}, skipping ${orderId}`);
-            return;
+            console.warn(`⚠️ No price for ${n}, skipping ${orderId}`)
+            return
         }
 
         // Check received amount with enhanced BTC handling
         const [received, txNetwork] = await (async () => {
             if (["USDT", "USDC"].includes(n)) {
-                return [
-                    await checkERC20Balance(TOKEN_ADDRESSES[n], address, 6),
-                    "ETH"
-                ];
+                return [await checkERC20Balance(TOKEN_ADDRESSES[n], address, 6), "ETH"]
             }
 
             // Special handling for BTC to include unconfirmed transactions
             if (n === "BTC") {
-                const balance = await checkBTCPaymentReceived(address);
-                return [balance, "BTC"];
+                const balance = await checkBTCPaymentReceived(address)
+                return [balance, "BTC"]
             }
 
-            return [
-                await checkPaymentReceived(n, address),
-                n
-            ];
-        })();
+            return [await checkPaymentReceived(n, address), n]
+        })()
 
-        console.log(`💰 ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`);
+        console.log(`💰 ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`)
 
         // Process payment if threshold met (92%)
         if (received >= expectedCrypto * 0.92) {
-            await completeOrderPayment(order, expectedCrypto, received, txNetwork);
+            await completeOrderPayment(order, expectedCrypto, received, txNetwork)
         } else {
-            await updatePendingOrder(order, expectedCrypto, received);
+            await updatePendingOrder(order, expectedCrypto, received)
         }
     } catch (err) {
-        console.error(`❌ Order ${orderId} processing failed:`, err.message);
+        console.error(`❌ Order ${orderId} processing failed:`, err.message)
     }
 }
 
@@ -205,58 +200,35 @@ async function processOrderPayment(order) {
 async function checkBTCPaymentReceived(address) {
     try {
         // Include both confirmed and unconfirmed transactions
-        const { data } = await axios.get(
-            `https://blockstream.info/api/address/${address}/txs`
-        );
+        const { data } = await axios.get(`https://blockstream.info/api/address/${address}/txs`)
 
         // Calculate total received amount (both confirmed and unconfirmed)
         const receivedSats = data.reduce((total, tx) => {
-            return total + tx.vout.reduce((txTotal, output) => {
-                if (output.scriptpubkey_address === address) {
-                    return txTotal + output.value;
-                }
-                return txTotal;
-            }, 0);
-        }, 0);
+            return (
+                total +
+                tx.vout.reduce((txTotal, output) => {
+                    if (output.scriptpubkey_address === address) {
+                        return txTotal + output.value
+                    }
+                    return txTotal
+                }, 0)
+            )
+        }, 0)
 
-        return receivedSats / 1e8; // Convert to BTC
+        return receivedSats / 1e8 // Convert to BTC
     } catch (err) {
-        console.error("BTC payment check error:", err.message);
-        return 0;
+        console.error("BTC payment check error:", err.message)
+        return 0
     }
 }
 
-// New helper function for BTC-specific checking
-async function checkBTCPaymentReceived(address) {
-    try {
-        // Include both confirmed and unconfirmed transactions
-        const { data } = await axios.get(
-            `https://blockstream.info/api/address/${address}/txs`
-        );
-
-        // Calculate total received amount (both confirmed and unconfirmed)
-        const receivedSats = data.reduce((total, tx) => {
-            return total + tx.vout.reduce((txTotal, output) => {
-                if (output.scriptpubkey_address === address) {
-                    return txTotal + output.value;
-                }
-                return txTotal;
-            }, 0);
-        }, 0);
-
-        return receivedSats / 1e8; // Convert to BTC
-    } catch (err) {
-        console.error("BTC payment check error:", err.message);
-        return 0;
-    }
-}
 async function completeOrderPayment(order, expectedCrypto, received, txNetwork) {
-    const { orderId, network, address, addressIndex, _id } = order;
-    const n = network.toUpperCase();
+    const { orderId, network, address, addressIndex, _id } = order
+    const n = network.toUpperCase()
 
-    console.log(`✅ Payment received for ${orderId} on ${n}. Processing...`);
+    console.log(`✅ Payment received for ${orderId} on ${n}. Processing...`)
     function isValidSolanaTxHash(txHash) {
-        return txHash && /^[A-Za-z0-9]{88}$/.test(txHash);
+        return txHash && /^[A-Za-z0-9]{88}$/.test(txHash)
     }
     // // Get transaction details
     // const [txHash, confirmations] = await Promise.all([
@@ -264,28 +236,28 @@ async function completeOrderPayment(order, expectedCrypto, received, txNetwork) 
     //     getConfirmations(txNetwork, address)
     // ]);
 
-    let sweepTx = null;
-    let txHash = await getLatestTxHash(txNetwork, address);
-    let confirmations = 0;
+    let sweepTx = null
+    let txHash = await getLatestTxHash(txNetwork, address)
+    let confirmations = 0
 
     if (txHash && isValidSolanaTxHash(txHash)) {
-        confirmations = await getConfirmations(txNetwork, txHash);
+        confirmations = await getConfirmations(txNetwork, txHash)
     } else {
-        console.warn(`Invalid tx hash for ${orderId}: ${txHash}`);
-        txHash = null;
+        console.warn(`Invalid tx hash for ${orderId}: ${txHash}`)
+        txHash = null
     }
 
     if (received > 0) {
         try {
-            const sweepNetwork = ["USDT", "USDC"].includes(n) ? "ETH" : n;
-            sweepTx = await sweepByNetwork(sweepNetwork, addressIndex);
+            const sweepNetwork = ["USDT", "USDC"].includes(n) ? "ETH" : n
+            sweepTx = await sweepByNetwork(sweepNetwork, addressIndex)
 
             if (sweepTx) {
-                console.log(`🧹 Swept funds for ${orderId}: ${sweepTx}`);
-                await recordSweptBalance(order, received, sweepTx, n);
+                console.log(`🧹 Swept funds for ${orderId}: ${sweepTx}`)
+                await recordSweptBalance(order, received, sweepTx, n)
             }
         } catch (sweepErr) {
-            console.error(`❌ Sweep failed for ${orderId}:`, sweepErr.message);
+            console.error(`❌ Sweep failed for ${orderId}:`, sweepErr.message)
             // Don't fail the whole order if sweeping fails
         }
     }
@@ -304,21 +276,21 @@ async function completeOrderPayment(order, expectedCrypto, received, txNetwork) 
                     confirmations,
                     sweepTxHash: sweepTx || null,
                     priceEurAtCheck: expectedCrypto / order.amountFiat,
-                    lastProbeAt: new Date()
-                }
-            }
-        );
+                    lastProbeAt: new Date(),
+                },
+            },
+        )
 
-        console.log(updateResult.modifiedCount === 1 ?
-            `📦 ${orderId} updated to processing` :
-            `❌ Failed to update ${orderId}`);
+        console.log(
+            updateResult.modifiedCount === 1 ? `📦 ${orderId} updated to processing` : `❌ Failed to update ${orderId}`,
+        )
     } catch (err) {
-        console.error(`❌ Order ${orderId} update failed:`, err.message);
+        console.error(`❌ Order ${orderId} update failed:`, err.message)
     }
 }
 
 async function recordSweptBalance(order, amount, txHash, network) {
-    const foundBalances = getFoundBalancesCollection();
+    const foundBalances = getFoundBalancesCollection()
 
     await foundBalances.insertOne({
         orderId: order.orderId,
@@ -332,9 +304,9 @@ async function recordSweptBalance(order, amount, txHash, network) {
         metadata: {
             originalOrder: order._id,
             userEmail: order.userEmail,
-            package: order.package
-        }
-    });
+            package: order.package,
+        },
+    })
 }
 
 async function updatePendingOrder(order, expectedCrypto, received) {
@@ -344,39 +316,39 @@ async function updatePendingOrder(order, expectedCrypto, received) {
             $set: {
                 lastProbeAt: new Date(),
                 amountCryptoExpected: expectedCrypto,
-                amountCryptoReceived: received
-            }
-        }
-    );
-    console.log(`[PM: ⌛ Payment pending for] ${order.orderId}`);
+                amountCryptoReceived: received,
+            },
+        },
+    )
+    console.log(`[PM: ⌛ Payment pending for] ${order.orderId}`)
 }
 
 // ==================== WITHDRAWAL PROCESSING ====================
 
 async function processWithdrawalPayment(payment) {
-    const { network, address, cryptoAmount, verificationPaymentId } = payment;
+    const { network, address, cryptoAmount, verificationPaymentId } = payment
 
     try {
-        const received = await checkPaymentReceived(network, address);
-        const needed = cryptoAmount * 0.92; // 92% threshold
+        const received = await checkPaymentReceived(network, address)
+        const needed = cryptoAmount * 0.92 // 92% threshold
 
         if (received >= needed) {
-            await completeWithdrawalPayment(payment, received);
+            await completeWithdrawalPayment(payment, received)
         } else {
-            await updatePendingWithdrawal(payment, received);
+            await updatePendingWithdrawal(payment, received)
         }
     } catch (err) {
-        console.error(`Withdrawal check failed for ${verificationPaymentId}:`, err.message);
+        console.error(`Withdrawal check failed for ${verificationPaymentId}:`, err.message)
     }
 }
 
 async function completeWithdrawalPayment(payment, received) {
-    const { network, address, _id, verificationPaymentId } = payment;
+    const { network, address, _id, verificationPaymentId } = payment
 
     const [txHash, confirmations] = await Promise.all([
         getLatestTxHash(network, address),
-        getConfirmations(network, address)
-    ]);
+        getConfirmations(network, address),
+    ])
 
     await getWithdrawChargePaymentCollection().updateOne(
         { _id },
@@ -386,15 +358,15 @@ async function completeWithdrawalPayment(payment, received) {
                 paidAt: new Date(),
                 amountCryptoReceived: received,
                 txHash,
-                confirmations
-            }
-        }
-    );
+                confirmations,
+            },
+        },
+    )
 
-    console.log(`✅ Withdrawal payment confirmed: ${verificationPaymentId}`);
+    console.log(`✅ Withdrawal payment confirmed: ${verificationPaymentId}`)
 
     if (payment.type === "verification_payment") {
-        await createWithdrawalRequest(payment);
+        await createWithdrawalRequest(payment)
     }
 }
 
@@ -410,11 +382,11 @@ async function createWithdrawalRequest(payment) {
         walletAddress: payment.walletAddress,
         status: "pending_approval",
         createdAt: new Date(),
-        verificationTxHash: payment.txHash
-    };
+        verificationTxHash: payment.txHash,
+    }
 
-    await getWithdrawCollection().insertOne(withdrawalDoc);
-    console.log(`📝 Created withdrawal request for ${payment.userEmail}`);
+    await getWithdrawCollection().insertOne(withdrawalDoc)
+    console.log(`📝 Created withdrawal request for ${payment.userEmail}`)
 }
 
 async function updatePendingWithdrawal(payment, received) {
@@ -423,55 +395,96 @@ async function updatePendingWithdrawal(payment, received) {
         {
             $set: {
                 lastProbeAt: new Date(),
-                amountCryptoReceived: received
-            }
+                amountCryptoReceived: received,
+            },
+        },
+    )
+}
+
+// ==================== CLEANUP FUNCTIONS ====================
+
+async function cleanupExpiredOrders() {
+    try {
+        const thirtyMinutesAgo = Date.now() - 1800000 // 30 minutes in milliseconds
+
+        const result = await getOrdersCollection().deleteMany({
+            status: "pending",
+            expiresAt: { $lt: thirtyMinutesAgo },
+        })
+
+        if (result.deletedCount > 0) {
+            console.log(`🗑️ Cleaned up ${result.deletedCount} expired pending orders`)
         }
-    );
+    } catch (err) {
+        console.error("❌ Cleanup expired orders failed:", err.message)
+    }
+}
+
+async function cleanupExpiredWithdrawals() {
+    try {
+        const thirtyMinutesAgo = Date.now() - 1800000 // 30 minutes in milliseconds
+
+        const result = await getWithdrawChargePaymentCollection().deleteMany({
+            status: "pending",
+            expiresAt: { $lt: thirtyMinutesAgo },
+        })
+
+        if (result.deletedCount > 0) {
+            console.log(`🗑️ Cleaned up ${result.deletedCount} expired pending withdrawals`)
+        }
+    } catch (err) {
+        console.error("❌ Cleanup expired withdrawals failed:", err.message)
+    }
 }
 
 // ==================== MAIN POLLER ====================
 
 async function pollPendingOrders() {
     try {
+        await cleanupExpiredOrders()
+        await cleanupExpiredWithdrawals()
+
         // Process regular orders
         const orders = await getOrdersCollection()
             .find({
                 status: "pending",
-                expiresAt: { $gt: Date.now() - 86400000 } // Within last 24 hours
+                expiresAt: { $gt: Date.now() - 1800000 }, // Within last 30 minutes
             })
-            .toArray();
+            .toArray()
 
-        console.log(`🟡 Found ${orders.length} pending orders`);
-        await Promise.all(orders.map(processOrderPayment));
+        console.log(`🟡 Found ${orders.length} pending orders`)
+        await Promise.all(orders.map(processOrderPayment))
 
         // Process withdrawal payments
         const withdrawals = await getWithdrawChargePaymentCollection()
             .find({
                 status: "pending",
-                expiresAt: { $gt: Date.now() - 86400000 } // Within last 24 hours
+                expiresAt: { $gt: Date.now() - 1800000 }, // Within last 30 minutes
             })
-            .toArray();
+            .toArray()
 
-        console.log(`🟡 Found ${withdrawals.length} pending withdrawal payments`);
-        await Promise.all(withdrawals.map(processWithdrawalPayment));
+        console.log(`🟡 Found ${withdrawals.length} pending withdrawal payments`)
+        await Promise.all(withdrawals.map(processWithdrawalPayment))
     } catch (err) {
-        console.error("Polling error:", err.message);
+        console.error("Polling error:", err.message)
     }
 }
 
 function startPaymentMonitor({ intervalMs = 60000, minConfirmRatio = 0.94 } = {}) {
-    console.log(`🛰️ Payment monitor started (every ${intervalMs / 1000}s)`);
+    console.log(`🛰️ Payment monitor started (every ${intervalMs / 1000}s)`)
 
     // Immediate first run
-    pollPendingOrders().catch(err => console.error("Initial polling error:", err));
+    pollPendingOrders().catch((err) => console.error("Initial polling error:", err))
 
     // Periodic runs
-    setInterval(() => pollPendingOrders().catch(console.error), intervalMs);
+    setInterval(() => pollPendingOrders().catch(console.error), intervalMs)
 }
 
 module.exports = {
     startPaymentMonitor,
     pollPendingOrders,
     checkPaymentReceived,
-    verifyBalanceWithEtherscan
-};
+    verifyBalanceWithEtherscan,
+    cleanupExpiredOrders,
+    cleanupExpiredWithdrawals,
+}

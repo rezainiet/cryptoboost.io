@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://api.cryptoboost.capital"
+const API_BASE_URL = "http://localhost:9000"
 
 class ApiService {
     // Helper method for making HTTP requests
