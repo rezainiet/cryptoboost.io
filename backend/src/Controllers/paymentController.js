@@ -230,10 +230,10 @@ async function getUserAnalytics(req, res) {
             })
         }
 
-        const validNetworks = ["BTC", "ETH", "SOL", "TRC20", "USDT", "BNB", "MATIC", "AVAX", "DOT", "ADA", "LINK"]
+        const validNetworks = ["BTC", "ETH", "SOL", "TRC20", "USDT", "USDC", "BNB", "MATIC", "AVAX", "DOT", "ADA", "LINK"]
 
         const validOrders = userOrders.filter((order) => {
-            const hasValidStatus = ["completed", "processing", "started"].includes(order.status)
+            const hasValidStatus = ["completed"].includes(order.status)
             const hasValidNetwork = validNetworks.includes(order.network?.toUpperCase())
             return hasValidStatus && hasValidNetwork
         })

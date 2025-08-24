@@ -19,7 +19,7 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         try {
             setLoading(true)
-            const response = await fetch(`http://localhost:9000/api/admin/users?page=${currentPage}&limit=10&search=${searchTerm}`, {
+            const response = await fetch(`https://api.cryptoboost.capital/api/admin/users?page=${currentPage}&limit=10&search=${searchTerm}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
