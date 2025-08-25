@@ -5,6 +5,7 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { auth } from "../../../firebase"
 import { useNavigate } from "react-router-dom"
 import apiService from "../../services/apiService"
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
 
 const DashboardHome = () => {
     const [user] = useAuthState(auth)
@@ -65,13 +66,28 @@ const DashboardHome = () => {
 
     const generateMinuteHistory = (progressData) => {
         const history = []
-        const { investedAmount, profitPerMinute, totalDurationMinutes } = progressData
+        const { investedAmount, profitPerMinute } = progressData
+        const currentMinute = Math.floor(progressData.elapsedTime / (1000 * 60))
 
-        for (let minute = 1; minute <= totalDurationMinutes; minute++) {
+        const maxMinute = Math.max(1, currentMinute + 1) // Show at least 1 minute, up to current + 1
+
+        for (let minute = 1; minute <= maxMinute; minute++) {
             const capitalAtMinute = investedAmount + profitPerMinute * minute
+            const open = minute === 1 ? investedAmount : investedAmount + profitPerMinute * (minute - 1)
+            const close = capitalAtMinute
+            const high = close + profitPerMinute * 0.1 // Small variation for realistic look
+            const low = open - profitPerMinute * 0.05
+
             history.push({
                 minute,
                 capital: capitalAtMinute,
+                open,
+                high,
+                low,
+                close,
+                isPast: minute <= currentMinute,
+                isCurrent: minute === currentMinute + 1,
+                fillOpacity: minute <= currentMinute ? 0.8 : 0.6,
             })
         }
 
@@ -402,159 +418,109 @@ const DashboardHome = () => {
                                                     </h4>
                                                     <div className="bg-slate-900/50 rounded-xl border border-slate-700/30 p-4 lg:p-6">
                                                         <div className="relative">
-                                                            <div className="h-[220px] lg:h-[250px] w-full">
+                                                            <div className="h-[280px] w-full">
                                                                 {(() => {
                                                                     const chartData = generateMinuteHistory(progressData)
                                                                     const currentMinute = Math.floor(progressData.elapsedTime / (1000 * 60)) + 1
-                                                                    const maxCapital = Math.max(...chartData.map((d) => d.capital))
-                                                                    const minCapital = Math.min(...chartData.map((d) => d.capital))
-                                                                    const padding = (maxCapital - minCapital) * 0.1
-                                                                    const chartHeight = 180
-                                                                    const chartWidth = chartData.length > 0 ? Math.max(400, chartData.length * 10) : 400
 
                                                                     return (
-                                                                        <div className="overflow-x-auto">
-                                                                            <svg
-                                                                                width={chartWidth}
-                                                                                height="220"
-                                                                                className="min-w-full"
-                                                                                viewBox={`0 0 ${chartWidth} 220`}
-                                                                            >
-                                                                                {/* Enhanced grid */}
+                                                                        <ResponsiveContainer width="100%" height="100%">
+                                                                            <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                                                                 <defs>
-                                                                                    <pattern id="grid" width="50" height="36" patternUnits="userSpaceOnUse">
-                                                                                        <path
-                                                                                            d="M 50 0 L 0 0 0 36"
-                                                                                            fill="none"
-                                                                                            stroke="rgb(71 85 105 / 0.4)"
-                                                                                            strokeWidth="1"
-                                                                                            strokeDasharray="2,4"
-                                                                                        />
-                                                                                    </pattern>
+                                                                                    <linearGradient id="capitalGradient" x1="0" y1="0" x2="0" y2="1">
+                                                                                        <stop offset="0%" stopColor="#84cc16" stopOpacity={0.8} />
+                                                                                        <stop offset="50%" stopColor="#22c55e" stopOpacity={0.4} />
+                                                                                        <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
+                                                                                    </linearGradient>
+                                                                                    <linearGradient id="futureGradient" x1="0" y1="0" x2="0" y2="1">
+                                                                                        <stop offset="0%" stopColor="#64748b" stopOpacity={0.3} />
+                                                                                        <stop offset="100%" stopColor="#475569" stopOpacity={0.1} />
+                                                                                    </linearGradient>
                                                                                 </defs>
-                                                                                <rect width="100%" height={chartHeight} fill="url(#grid)" y="20" />
 
-                                                                                {/* Chart line with enhanced styling */}
-                                                                                <path
-                                                                                    d={chartData
-                                                                                        .map((point, index) => {
-                                                                                            const x = (index / (chartData.length - 1)) * (chartWidth - 60) + 30
-                                                                                            const y =
-                                                                                                20 +
-                                                                                                (1 -
-                                                                                                    (point.capital - minCapital + padding) /
-                                                                                                    (maxCapital - minCapital + 2 * padding)) *
-                                                                                                chartHeight
-                                                                                            return `${index === 0 ? "M" : "L"} ${x} ${y}`
-                                                                                        })
-                                                                                        .join(" ")}
-                                                                                    fill="none"
-                                                                                    stroke="rgb(132 204 22)"
-                                                                                    strokeWidth="3"
-                                                                                    strokeLinecap="round"
-                                                                                    strokeLinejoin="round"
+                                                                                <CartesianGrid strokeDasharray="3 3" stroke="#475569" strokeOpacity={0.3} />
+
+                                                                                <XAxis
+                                                                                    dataKey="minute"
+                                                                                    axisLine={false}
+                                                                                    tickLine={false}
+                                                                                    tick={{ fill: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}
+                                                                                    tickFormatter={(value) => `${value}m`}
+                                                                                    interval="preserveStartEnd"
                                                                                 />
 
-                                                                                {/* Enhanced data points */}
-                                                                                {chartData.map((point, index) => {
-                                                                                    const x = (index / (chartData.length - 1)) * (chartWidth - 60) + 30
-                                                                                    const y =
-                                                                                        20 +
-                                                                                        (1 -
-                                                                                            (point.capital - minCapital + padding) /
-                                                                                            (maxCapital - minCapital + 2 * padding)) *
-                                                                                        chartHeight
-                                                                                    const isPastMinute =
-                                                                                        point.minute <= Math.floor(progressData.elapsedTime / (1000 * 60))
-                                                                                    const isCurrentMinute = point.minute === currentMinute
+                                                                                <YAxis
+                                                                                    axisLine={false}
+                                                                                    tickLine={false}
+                                                                                    tick={{ fill: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}
+                                                                                    tickFormatter={(value) => `€${value.toFixed(0)}`}
+                                                                                    domain={["dataMin - 10", "dataMax + 10"]}
+                                                                                />
 
-                                                                                    return (
-                                                                                        <g key={index}>
-                                                                                            <circle
-                                                                                                cx={x}
-                                                                                                cy={y}
-                                                                                                r={isCurrentMinute ? 6 : isPastMinute ? 3 : 2}
-                                                                                                fill={
-                                                                                                    isCurrentMinute
-                                                                                                        ? "rgb(132 204 22)"
-                                                                                                        : isPastMinute
-                                                                                                            ? "rgb(34 197 94)"
-                                                                                                            : "rgb(100 116 139)"
-                                                                                                }
-                                                                                                stroke={
-                                                                                                    isCurrentMinute
-                                                                                                        ? "rgb(15 23 42)"
-                                                                                                        : isPastMinute
-                                                                                                            ? "rgb(132 204 22)"
-                                                                                                            : "none"
-                                                                                                }
-                                                                                                strokeWidth={isCurrentMinute ? 3 : isPastMinute ? 1 : 0}
-                                                                                                className={isCurrentMinute ? "animate-pulse" : ""}
-                                                                                            />
-                                                                                            <circle
-                                                                                                cx={x}
-                                                                                                cy={y}
-                                                                                                r="12"
-                                                                                                fill="transparent"
-                                                                                                className="hover:fill-slate-600/20 cursor-pointer"
-                                                                                            >
-                                                                                                <title>
-                                                                                                    Minute {point.minute}: €{point.capital.toFixed(2)}
-                                                                                                </title>
-                                                                                            </circle>
-                                                                                        </g>
-                                                                                    )
-                                                                                })}
+                                                                                <Tooltip
+                                                                                    contentStyle={{
+                                                                                        backgroundColor: "#1e293b",
+                                                                                        border: "1px solid #475569",
+                                                                                        borderRadius: "8px",
+                                                                                        color: "#f1f5f9",
+                                                                                        fontSize: "12px",
+                                                                                        fontFamily: "monospace",
+                                                                                    }}
+                                                                                    formatter={(value, name) => [
+                                                                                        `€${value.toFixed(2)}`,
+                                                                                        name === "capital" ? "Capital" : name,
+                                                                                    ]}
+                                                                                    labelFormatter={(label) => `Minute ${label}`}
+                                                                                />
 
-                                                                                {/* Enhanced axis labels */}
-                                                                                {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => {
-                                                                                    const value = minCapital + ratio * (maxCapital - minCapital)
-                                                                                    const y = 20 + (1 - ratio) * chartHeight
-                                                                                    return (
-                                                                                        <text
-                                                                                            key={index}
-                                                                                            x="25"
-                                                                                            y={y + 4}
-                                                                                            fontSize="11"
-                                                                                            fill="rgb(148 163 184)"
-                                                                                            textAnchor="end"
-                                                                                            fontFamily="monospace"
-                                                                                        >
-                                                                                            €{value.toFixed(0)}
-                                                                                        </text>
-                                                                                    )
-                                                                                })}
+                                                                                <Area
+                                                                                    type="monotone"
+                                                                                    dataKey="capital"
+                                                                                    stroke="#84cc16"
+                                                                                    strokeWidth={3}
+                                                                                    fill="url(#capitalGradient)"
+                                                                                    fillOpacity={(entry) => (entry?.isPast ? 0.6 : 0.1)}
+                                                                                    dot={(props) => {
+                                                                                        const { cx, cy, payload } = props
+                                                                                        if (!payload) return null
 
-                                                                                {chartData
-                                                                                    .filter(
-                                                                                        (_, index) => index % Math.max(1, Math.floor(chartData.length / 10)) === 0,
-                                                                                    )
-                                                                                    .map((point, index) => {
-                                                                                        const originalIndex = chartData.findIndex((d) => d.minute === point.minute)
-                                                                                        const x = (originalIndex / (chartData.length - 1)) * (chartWidth - 60) + 30
                                                                                         return (
-                                                                                            <text
-                                                                                                key={index}
-                                                                                                x={x}
-                                                                                                y="215"
-                                                                                                fontSize="11"
-                                                                                                fill="rgb(148 163 184)"
-                                                                                                textAnchor="middle"
-                                                                                                fontFamily="monospace"
-                                                                                            >
-                                                                                                {point.minute}m
-                                                                                            </text>
+                                                                                            <circle
+                                                                                                cx={cx}
+                                                                                                cy={cy}
+                                                                                                r={payload.isCurrent ? 6 : payload.isPast ? 4 : 2}
+                                                                                                fill={
+                                                                                                    payload.isCurrent ? "#84cc16" : payload.isPast ? "#22c55e" : "#64748b"
+                                                                                                }
+                                                                                                stroke={payload.isCurrent ? "#1e293b" : "none"}
+                                                                                                strokeWidth={payload.isCurrent ? 2 : 0}
+                                                                                                className={payload.isCurrent ? "animate-pulse" : ""}
+                                                                                            />
                                                                                         )
-                                                                                    })}
-                                                                            </svg>
-                                                                        </div>
+                                                                                    }}
+                                                                                    activeDot={{
+                                                                                        r: 6,
+                                                                                        fill: "#84cc16",
+                                                                                        stroke: "#1e293b",
+                                                                                        strokeWidth: 2,
+                                                                                    }}
+                                                                                />
+                                                                            </AreaChart>
+                                                                        </ResponsiveContainer>
                                                                     )
                                                                 })()}
+                                                            </div>
+
+                                                            <div className="absolute top-4 right-4 bg-slate-800/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-lime-400/30">
+                                                                <div className="text-xs text-gray-400 mb-1">TEMPS ÉCOULÉ</div>
+                                                                <div className="text-lime-400 font-mono font-bold">
+                                                                    {formatDuration(progressData.elapsedTime)}
+                                                                </div>
                                                             </div>
                                                         </div>
 
                                                         <div className="mt-6 pt-4 border-t border-slate-600/30">
-                                                            <div className="grid grid-cols-3 gap-4">
+                                                            <div className="grid grid-cols-2 gap-4">
                                                                 <div className="text-center p-3 bg-slate-800/50 rounded-lg">
                                                                     <div className="text-gray-400 text-xs font-medium mb-1">DÉBUT</div>
                                                                     <div className="text-white font-mono font-bold">€{progressData.investedAmount}</div>
@@ -563,12 +529,6 @@ const DashboardHome = () => {
                                                                     <div className="text-gray-400 text-xs font-medium mb-1">ACTUEL</div>
                                                                     <div className="text-lime-400 font-mono font-bold text-lg">
                                                                         €{(progressData.investedAmount + progressData.currentGains).toFixed(2)}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-center p-3 bg-slate-800/50 rounded-lg">
-                                                                    <div className="text-gray-400 text-xs font-medium mb-1">OBJECTIF</div>
-                                                                    <div className="text-emerald-400 font-mono font-bold">
-                                                                        €{progressData.totalReturn}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -583,7 +543,8 @@ const DashboardHome = () => {
                                                             <span className="text-white font-semibold">€{progressData.investedAmount}</span>
                                                         </span>
                                                         <span className="text-gray-400">
-                                                            Retour total: <span className="text-lime-400 font-bold">€{progressData.totalReturn}</span>
+                                                            Gains actuels:{" "}
+                                                            <span className="text-lime-400 font-bold">€{progressData.currentGains.toFixed(2)}</span>
                                                         </span>
                                                     </div>
                                                 </div>
