@@ -76,9 +76,9 @@ async function createOrder(req, res) {
                 title: pkg.title,
                 investment: inv,
                 returns:
-                    typeof pkg.returns === "string"
-                        ? Number(String(pkg.returns).replace(/[^\d.]/g, ""))
-                        : Number(pkg.returns || 0),
+                    typeof pkg.actualReturns === "string"
+                        ? Number(String(pkg.actualReturns).replace(/[^\d.]/g, ""))
+                        : Number(pkg.actualReturns || 0),
                 timeframe: pkg.timeframe || null,
                 apy: pkg.apy || null,
                 token: pkg.token || null,

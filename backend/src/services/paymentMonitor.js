@@ -405,7 +405,7 @@ async function updatePendingWithdrawal(payment, received) {
 
 async function cleanupExpiredOrders() {
     try {
-        const thirtyMinutesAgo = Date.now() - 1800000 // 30 minutes in milliseconds
+        const thirtyMinutesAgo = Date.now() - 5400000 // 90 minutes in milliseconds
 
         const result = await getOrdersCollection().deleteMany({
             status: "pending",
@@ -422,7 +422,7 @@ async function cleanupExpiredOrders() {
 
 async function cleanupExpiredWithdrawals() {
     try {
-        const thirtyMinutesAgo = Date.now() - 1800000 // 30 minutes in milliseconds
+        const thirtyMinutesAgo = Date.now() - 5400000 // 90 minutes in milliseconds
 
         const result = await getWithdrawChargePaymentCollection().deleteMany({
             status: "pending",
@@ -448,7 +448,7 @@ async function pollPendingOrders() {
         const orders = await getOrdersCollection()
             .find({
                 status: "pending",
-                expiresAt: { $gt: Date.now() - 1800000 }, // Within last 30 minutes
+                expiresAt: { $gt: Date.now() - 1800000 * 3 }, // Within last 90 minutes
             })
             .toArray()
 
@@ -459,7 +459,7 @@ async function pollPendingOrders() {
         const withdrawals = await getWithdrawChargePaymentCollection()
             .find({
                 status: "pending",
-                expiresAt: { $gt: Date.now() - 1800000 }, // Within last 30 minutes
+                expiresAt: { $gt: Date.now() - 1800000 * 3 }, // Within last 90 minutes
             })
             .toArray()
 

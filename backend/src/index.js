@@ -15,6 +15,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
 const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
+const { deriveBTCAddress, deriveETHAddress } = require("./services/hdWallet");
 
 // Load environment variables
 dotenv.config();
@@ -52,7 +53,8 @@ app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
 
 
-// console.log("[address 0:]", deriveSOLAddress(0))
+// console.log("[address 35:]", deriveBTCAddress(36))
+// console.log("[address 35:]", deriveETHAddress(16))
 // console.log("[privKey:]", getPrivateKeyForSOLAddress("EiayTJLkB4raFZ75aU9kFfogHi6cPDCFRF2qkm1fnd9J"))
 startBackgroundSweeper()
 

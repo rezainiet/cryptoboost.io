@@ -76,6 +76,8 @@ const PaymentPage = () => {
 
     const isCreatingOrder = useRef(false)
 
+    console.log(initialPkg)
+
     useEffect(() => {
         if (!initialPkg) return
 
