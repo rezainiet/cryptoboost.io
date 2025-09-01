@@ -9,8 +9,6 @@ export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [user, loading] = useAuthState(auth);
 
-    console.log(user)
-
     return (
         <nav className="relative z-50 px-4 sm:px-6 py-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -24,6 +22,12 @@ export default function Navbar() {
 
                 {/* Desktop Navigation */}
                 <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
+                    <a
+                        href="#packages-section"
+                        className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"
+                    >
+                        Forfaits
+                    </a>
                     <a
                         href="/privacy-policy"
                         className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"

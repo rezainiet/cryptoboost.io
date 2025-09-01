@@ -67,7 +67,7 @@ const Performance = () => {
                 setLoading(true)
                 setError(null)
 
-                const response = await fetch(`https://api.cryptoboost.capital/payments/analytics/${user.email}`, {
+                const response = await fetch(`http://localhost:9000/payments/analytics/${user.email}`, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",

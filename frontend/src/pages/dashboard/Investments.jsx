@@ -43,7 +43,16 @@ const Investments = () => {
                     // Transform orders into investment format with real-time tracking
                     const transformedInvestments = ordersResponse.orders.map((order) => {
                         const now = Date.now()
-                        const timeRemaining = order.expiresAt - now
+                        const timeRemaining = (() => {
+                            if (order.status === "started" && order.startedAt) {
+                                const startedTime = new Date(order.startedAt).getTime();
+                                const packageDuration = parseTimeframe(order.package.timeframe);
+                                return startedTime + packageDuration - now;
+                            } else {
+                                return order.expiresAt - now;
+                            }
+                        })();
+
                         const isExpired = timeRemaining <= 0 && order.status === "pending"
 
                         let progress = 0
@@ -224,6 +233,12 @@ const Investments = () => {
         }
     }
 
+    function parseTimeframe(timeframeStr) {
+        const match = timeframeStr.match(/(\d+)\s*heures?/i);
+        return match ? parseInt(match[1], 10) * 60 * 60 * 1000 : 3 * 60 * 60 * 1000; // fallback to 3h
+    }
+
+
     const startBot = async (orderId) => {
         try {
             setStartingBot((prev) => ({ ...prev, [orderId]: true }))
@@ -237,23 +252,26 @@ const Investments = () => {
                     const ordersResponse = await apiService.getUserOrders(user.email, 1, 20)
                     if (ordersResponse.success) {
                         const transformedInvestments = ordersResponse.orders.map((order) => {
-                            const now = Date.now()
-                            const timeRemaining = order.expiresAt - now
-                            const isExpired = timeRemaining <= 0 && order.status === "pending"
+                            const now = Date.now();
+                            const timeRemaining = order.expiresAt - now;
+                            const isExpired = timeRemaining <= 0 && order.status === "pending";
 
-                            let progress = 0
-                            let showProgress = false
+                            let progress = 0;
+                            let showProgress = false;
+
                             if (order.status === "started" && order.startedAt) {
-                                showProgress = true
-                                const startedTime = new Date(order.startedAt).getTime()
-                                const packageDuration = 3 * 60 * 60 * 1000 // 3 hours in milliseconds
-                                const timeElapsed = now - startedTime
-                                progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
+                                showProgress = true;
+
+                                const startedTime = new Date(order.startedAt).getTime();
+                                const packageDuration = parseTimeframe(order.package.timeframe); // ✅ use real duration
+                                const timeElapsed = now - startedTime;
+                                progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100);
                             }
 
-                            let expectedCompletion = null
+                            let expectedCompletion = null;
                             if (order.status === "processing" && order.txHash) {
-                                expectedCompletion = order.createdAtMs + 3 * 60 * 60 * 1000
+                                const packageDuration = parseTimeframe(order.package.timeframe);
+                                expectedCompletion = order.createdAtMs + packageDuration;
                             }
 
                             return {
@@ -262,7 +280,7 @@ const Investments = () => {
                                 amount: `€${order.amountFiat.toLocaleString()}`,
                                 expectedReturn: `€${order.package.returns.toLocaleString()}`,
                                 progress,
-                                showProgress, // Add flag to control progress bar visibility
+                                showProgress,
                                 status: getStatusLabel(order.status, isExpired),
                                 timeRemaining: formatTimeRemaining(timeRemaining, order.status, expectedCompletion),
                                 crypto: order.network,
@@ -274,8 +292,8 @@ const Investments = () => {
                                 orderId: order.orderId,
                                 rawStatus: order.status,
                                 tradingHashes: order.tradingHashes || [],
-                            }
-                        })
+                            };
+                        });
                         setInvestments(transformedInvestments)
                     }
                     setRefreshing(false)
@@ -421,7 +439,8 @@ const Investments = () => {
                                         <div className="min-w-0 flex-1">
                                             <h3 className="text-white font-bold text-lg sm:text-xl truncate">{investment.package}</h3>
                                             <p className="text-gray-300 font-medium text-base sm:text-lg">
-                                                {investment.amount} → {investment.expectedReturn}
+                                                {investment.amount}
+                                                {/* → {investment.expectedReturn} */}
                                             </p>
                                             <p className="text-xs text-gray-500 font-mono bg-slate-800/50 px-2 sm:px-3 py-1 rounded-md sm:rounded-lg mt-1 sm:mt-2 inline-block">
                                                 ID: {investment.orderId.slice(-8)}
