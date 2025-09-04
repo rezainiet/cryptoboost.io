@@ -24,7 +24,7 @@ async function getETHBalance(address) {
         const balance = await ETH_PROVIDER.getBalance(address);
         return Number(ethers.formatEther(balance));
     } catch (err) {
-        console.error("ETH balance check error:", err.message);
+        console.error("ETH balance check error at Network:", err.message);
         return 0;
     }
 }

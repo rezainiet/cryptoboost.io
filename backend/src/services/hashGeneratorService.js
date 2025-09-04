@@ -134,8 +134,8 @@ async function processStartedOrders() {
 
         for (const order of startedOrders) {
             if (order.startedAt) {
-                const startedTime = moment(order.startedAt, "YYYY-MM-DD HH:mm:ss")
-                const currentTime = moment()
+                const startedTime = moment.utc(order.startedAt, "YYYY-MM-DD HH:mm:ss")
+                const currentTime = moment.utc()
 
                 const rawTimeframe = order.package?.duration || order.package?.timeframe || 3
                 const packageDurationHours = parseTimeframeToHours(rawTimeframe)

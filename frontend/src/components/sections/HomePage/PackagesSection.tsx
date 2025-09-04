@@ -92,7 +92,7 @@ const PackagesSection = () => {
 
     const handlePackageSelect = (pkg) => {
         // default to BTC network for now; PaymentPage lets them switch
-        navigate("/payment", { state: { package: pkg, network: "BTC" } })
+        navigate("/payment", { state: { package: pkg, network: "SOL" } })
     }
 
     return (

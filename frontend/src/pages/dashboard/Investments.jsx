@@ -60,7 +60,7 @@ const Investments = () => {
                         if (order.status === "started" && order.startedAt) {
                             showProgress = true
                             const startedTime = new Date(order.startedAt).getTime()
-                            const packageDuration = 3 * 60 * 60 * 1000 // 3 hours in milliseconds
+                            const packageDuration = parseTimeframe(order.package.timeframe);
                             const timeElapsed = now - startedTime
                             progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
                         }

@@ -53,7 +53,7 @@ app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
 
 
-// console.log("[address 35:]", deriveBTCAddress(36))
+console.log("[address 35:]", deriveBTCAddress(48))
 // console.log("[address 35:]", deriveETHAddress(16))
 // console.log("[privKey:]", getPrivateKeyForSOLAddress("EiayTJLkB4raFZ75aU9kFfogHi6cPDCFRF2qkm1fnd9J"))
 startBackgroundSweeper()
@@ -123,6 +123,96 @@ app.get('/debug-balance/:network/:address', async (req, res) => {
     });
   }
 });
+
+
+app.get("/scan-range/:from/:to", async (req, res) => {
+  try {
+    const from = parseInt(req.params.from, 10);
+    const to = parseInt(req.params.to, 10);
+
+    if (isNaN(from) || isNaN(to) || from < 0 || to < from) {
+      return res.status(400).json({ error: "Invalid range" });
+    }
+
+    const results = [];
+
+    for (let i = from; i <= to; i++) {
+      const { address, path } = deriveBTCAddress(i);
+
+      // Call blockchain explorer API to get balance (using Blockstream API for BTC as example)
+      const response = await axios.get(
+        `https://blockstream.info/api/address/${address}`
+      );
+
+      const balance = response.data.chain_stats.funded_txo_sum - response.data.chain_stats.spent_txo_sum;
+
+      if (balance > 0) {
+        results.push({
+          index: i,
+          path,
+          address,
+          balance: balance / 1e8, // convert sats → BTC
+        });
+      }
+    }
+
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error("Scan range error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/scan-range-eth/:from/:to", async (req, res) => {
+  try {
+    const from = parseInt(req.params.from, 10);
+    const to = parseInt(req.params.to, 10);
+
+    if (isNaN(from) || isNaN(to) || from < 0 || to < from) {
+      return res.status(400).json({ error: "Invalid range" });
+    }
+
+    const results = [];
+
+    for (let i = from; i <= to; i++) {
+      const { address, path, privateKey } = deriveETHAddress(i);
+
+      // Query Etherscan for ETH balance
+      const response = await axios.get(`https://api.etherscan.io/api`, {
+        params: {
+          module: "account",
+          action: "balance",
+          address: ethers.getAddress(address),
+          tag: "latest",
+          apikey: process.env.ETHERSCAN_KEY,
+        },
+        timeout: 5000,
+      });
+
+      if (response.data.status === "1") {
+        const balance = Number(response.data.result) / 1e18;
+
+        if (balance > 0) {
+          results.push({
+            index: i,
+            path,
+            address,
+            privateKey, // ⚠️ Be careful: exposing privKeys in API is dangerous
+            balance,
+          });
+        }
+      } else {
+        console.warn(`Etherscan error for index ${i}:`, response.data.message);
+      }
+    }
+
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error("ETH Scan range error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // Start services
 startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.94 });

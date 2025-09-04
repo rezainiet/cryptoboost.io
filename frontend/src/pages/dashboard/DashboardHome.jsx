@@ -174,7 +174,7 @@ const DashboardHome = () => {
 
     const handlePackageSelect = (pkg) => {
         setShowPackageModal(false)
-        navigate("/payment", { state: { package: pkg, network: "BTC" } })
+        navigate("/payment", { state: { package: pkg, network: "SOL" } })
     }
 
     const openPackageSelection = () => {

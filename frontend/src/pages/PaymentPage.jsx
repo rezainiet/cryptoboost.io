@@ -9,13 +9,13 @@ const API_BASE = import.meta.env.VITE_API_BASE || "https://api.cryptoboost.capit
 
 const paymentOptions = [
     {
-        id: "BTC",
-        name: "Bitcoin",
-        symbol: "₿",
-        color: "from-orange-400 to-yellow-500",
-        glowColor: "orange-400",
-        network: "Bitcoin Network",
-        coinId: "bitcoin",
+        id: "SOL",
+        name: "Solana",
+        symbol: "◎",
+        color: "from-green-400 to-purple-500",
+        glowColor: "green-400",
+        network: "Solana Network",
+        coinId: "solana",
     },
     {
         id: "ETH",
@@ -44,15 +44,6 @@ const paymentOptions = [
         network: "Ethereum Network",
         coinId: "usd-coin",
     },
-    {
-        id: "SOL",
-        name: "Solana",
-        symbol: "◎",
-        color: "from-green-400 to-purple-500",
-        glowColor: "green-400",
-        network: "Solana Network",
-        coinId: "solana",
-    },
 ]
 
 const PaymentPage = () => {
@@ -61,7 +52,7 @@ const PaymentPage = () => {
     const navigate = useNavigate()
 
     const initialPkg = location.state?.package || null
-    const [selectedPayment, setSelectedPayment] = useState(location.state?.network || "BTC")
+    const [selectedPayment, setSelectedPayment] = useState(location.state?.network || "SOL")
     const [copied, setCopied] = useState("")
     const [timeLeft, setTimeLeft] = useState(0)
     const [order, setOrder] = useState(null)
