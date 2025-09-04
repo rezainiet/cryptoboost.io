@@ -45,7 +45,7 @@ const Investments = () => {
                         const now = Date.now()
                         const timeRemaining = (() => {
                             if (order.status === "started" && order.startedAt) {
-                                const startedTime = new Date(order.startedAt).getTime();
+                                const startedTime = order.startedAtMs;
                                 const packageDuration = parseTimeframe(order.package.timeframe);
                                 return startedTime + packageDuration - now;
                             } else {
@@ -59,11 +59,14 @@ const Investments = () => {
                         let showProgress = false
                         if (order.status === "started" && order.startedAt) {
                             showProgress = true
-                            const startedTime = new Date(order.startedAt).getTime()
-                            const packageDuration = parseTimeframe(order.package.timeframe);
+
+                            const startedTime = order.startedAtMs;
+                            const packageDuration = parseTimeframe(order.package.timeframe) // ✅ real duration in ms
                             const timeElapsed = now - startedTime
+
                             progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
                         }
+
 
                         // Calculate expected completion time for processing orders
                         let expectedCompletion = null
@@ -262,8 +265,8 @@ const Investments = () => {
                             if (order.status === "started" && order.startedAt) {
                                 showProgress = true
 
-                                const startedTime = new Date(order.startedAt).getTime()
-                                const packageDuration = parseTimeframe(order.package.timeframe) // ✅ real duration in ms
+                                const startedTime = order.startedAtMs;
+                                const packageDuration = parseTimeframe(order.package.timeframe) // ✅
                                 const timeElapsed = now - startedTime
 
                                 progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
