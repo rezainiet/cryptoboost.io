@@ -174,7 +174,7 @@ const DashboardHome = () => {
 
     const handlePackageSelect = (pkg) => {
         setShowPackageModal(false)
-        navigate("/payment", { state: { package: pkg, network: "SOL" } })
+        navigate("/payment", { state: { package: pkg, network: "BTC" } })
     }
 
     const openPackageSelection = () => {
@@ -289,47 +289,47 @@ const DashboardHome = () => {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="space-y-4 sm:space-y-6 lg:space-y-8 px-2 sm:px-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {stats.map((stat, index) => (
                     <div
                         key={index}
-                        className="bg-slate-800/50 backdrop-blur-xl border border-teal-500/20 rounded-xl p-4 lg:p-6 hover:border-lime-400/30 transition-all duration-300 hover:transform hover:scale-105"
+                        className="bg-slate-800/50 backdrop-blur-xl border border-teal-500/20 rounded-xl p-3 sm:p-4 lg:p-6 hover:border-lime-400/30 transition-all duration-300 hover:transform hover:scale-105"
                     >
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-gray-400 text-xs lg:text-sm font-medium">{stat.title}</h3>
+                        <div className="flex items-center justify-between mb-2 sm:mb-3">
+                            <h3 className="text-gray-400 text-xs sm:text-sm font-medium truncate pr-2">{stat.title}</h3>
                             <span
-                                className={`text-xs px-2 py-1 rounded-full font-medium ${stat.positive ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}
+                                className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ${stat.positive ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}
                             >
                                 {stat.change}
                             </span>
                         </div>
-                        <p className="text-xl lg:text-2xl font-bold text-white">{stat.value}</p>
+                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white break-words">{stat.value}</p>
                     </div>
                 ))}
             </div>
 
             <div className="bg-slate-800/50 backdrop-blur-xl border border-teal-500/20 rounded-xl overflow-hidden">
-                <div className="p-4 lg:p-6 border-b border-slate-700/30">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-lg lg:text-xl font-bold text-white">Investissements Actifs</h2>
+                <div className="p-3 sm:p-4 lg:p-6 border-b border-slate-700/30">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                        <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">Investissements Actifs</h2>
                         {activities.length > 0 && (
-                            <span className="text-sm text-gray-400 bg-slate-700/30 px-3 py-1 rounded-full">
+                            <span className="text-xs sm:text-sm text-gray-400 bg-slate-700/30 px-2 sm:px-3 py-1 rounded-full self-start sm:self-auto">
                                 {activities.length} investissement{activities.length > 1 ? "s" : ""} en cours
                             </span>
                         )}
                     </div>
                 </div>
 
-                <div className="p-4 lg:p-6">
+                <div className="p-3 sm:p-4 lg:p-6">
                     {activities.length === 0 ? (
-                        <div className="text-center py-12">
+                        <div className="text-center py-8 sm:py-12">
                             <button
                                 onClick={openPackageSelection}
-                                className="w-20 h-20 bg-gradient-to-r from-lime-400/20 to-emerald-400/20 rounded-full flex items-center justify-center mx-auto mb-6 hover:from-lime-400/30 hover:to-emerald-400/30 transition-all duration-300 transform hover:scale-110 group"
+                                className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-lime-400/20 to-emerald-400/20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 hover:from-lime-400/30 hover:to-emerald-400/30 transition-all duration-300 transform hover:scale-110 group"
                             >
                                 <svg
-                                    className="w-10 h-10 text-gray-400 group-hover:text-lime-400 transition-colors"
+                                    className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 group-hover:text-lime-400 transition-colors"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -337,61 +337,67 @@ const DashboardHome = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                 </svg>
                             </button>
-                            <p className="text-gray-300 mb-2 text-lg font-medium">Aucun investissement actif</p>
-                            <p className="text-sm text-gray-500">Commencez par choisir un package d'investissement</p>
+                            <p className="text-gray-300 mb-2 text-base sm:text-lg font-medium">Aucun investissement actif</p>
+                            <p className="text-xs sm:text-sm text-gray-500 px-4">Commencez par choisir un package d'investissement</p>
                         </div>
                     ) : (
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
                             {activities.map((activity, index) => {
                                 const progressData = activity.status === "started" ? calculateInvestmentProgress(activity) : null
 
                                 return (
                                     <div
                                         key={index}
-                                        className="bg-slate-700/30 rounded-xl p-4 lg:p-6 hover:bg-slate-700/50 transition-all duration-300 border border-slate-600/20"
+                                        className="bg-slate-700/30 rounded-xl p-3 sm:p-4 lg:p-6 hover:bg-slate-700/50 transition-all duration-300 border border-slate-600/20"
                                     >
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                                            <div className="flex items-center space-x-4">
-                                                <div className="w-12 h-12 bg-gradient-to-r from-lime-400 to-emerald-400 rounded-full flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-slate-900 font-bold text-sm">{activity.crypto}</span>
+                                        <div className="flex flex-col gap-3 sm:gap-4 mb-3 sm:mb-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-lime-400 to-emerald-400 rounded-full flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-slate-900 font-bold text-xs sm:text-sm">{activity.crypto}</span>
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-white font-medium text-sm sm:text-base lg:text-lg truncate">
+                                                            {activity.type}
+                                                        </p>
+                                                        <p className="text-gray-400 text-xs sm:text-sm">{activity.time}</p>
+                                                        {activity.orderId && (
+                                                            <p className="text-xs text-gray-500 font-mono truncate">
+                                                                ID: {activity.orderId.slice(-8)}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-white font-medium text-lg">{activity.type}</p>
-                                                    <p className="text-gray-400 text-sm">{activity.time}</p>
-                                                    {activity.orderId && (
-                                                        <p className="text-xs text-gray-500 font-mono">ID: {activity.orderId.slice(-8)}</p>
-                                                    )}
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="text-white font-bold text-base sm:text-lg lg:text-xl">{activity.amount}</p>
+                                                    <p
+                                                        className={`text-xs sm:text-sm font-medium ${activity.displayStatus === "Confirmé" || activity.displayStatus === "Reçu"
+                                                            ? "text-emerald-400"
+                                                            : activity.displayStatus === "En attente"
+                                                                ? "text-yellow-400"
+                                                                : activity.displayStatus === "Actif"
+                                                                    ? "text-lime-400"
+                                                                    : "text-blue-400"
+                                                            }`}
+                                                    >
+                                                        {activity.displayStatus}
+                                                    </p>
                                                 </div>
-                                            </div>
-                                            <div className="text-left sm:text-right">
-                                                <p className="text-white font-bold text-xl">{activity.amount}</p>
-                                                <p
-                                                    className={`text-sm font-medium ${activity.displayStatus === "Confirmé" || activity.displayStatus === "Reçu"
-                                                        ? "text-emerald-400"
-                                                        : activity.displayStatus === "En attente"
-                                                            ? "text-yellow-400"
-                                                            : activity.displayStatus === "Actif"
-                                                                ? "text-lime-400"
-                                                                : "text-blue-400"
-                                                        }`}
-                                                >
-                                                    {activity.displayStatus}
-                                                </p>
                                             </div>
                                         </div>
 
                                         {activity.status === "started" && progressData && (
-                                            <div className="bg-slate-800/50 rounded-xl p-4 lg:p-6 border border-lime-400/20">
-                                                <div className="mb-6">
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <span className="text-sm font-medium text-gray-300">Progression</span>
-                                                        <span className="text-lg font-bold text-lime-400 font-mono">
+                                            <div className="bg-slate-800/50 rounded-xl p-3 sm:p-4 lg:p-6 border border-lime-400/20">
+                                                <div className="mb-4 sm:mb-6">
+                                                    <div className="flex justify-between items-center mb-2 sm:mb-3">
+                                                        <span className="text-xs sm:text-sm font-medium text-gray-300">Progression</span>
+                                                        <span className="text-sm sm:text-base lg:text-lg font-bold text-lime-400 font-mono">
                                                             {progressData.progressPercentage.toFixed(1)}%
                                                         </span>
                                                     </div>
-                                                    <div className="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
+                                                    <div className="w-full bg-slate-700 rounded-full h-3 sm:h-4 overflow-hidden">
                                                         <div
-                                                            className="bg-gradient-to-r from-lime-400 to-emerald-400 h-4 rounded-full transition-all duration-1000 relative overflow-hidden"
+                                                            className="bg-gradient-to-r from-lime-400 to-emerald-400 h-3 sm:h-4 rounded-full transition-all duration-1000 relative overflow-hidden"
                                                             style={{ width: `${progressData.progressPercentage}%` }}
                                                         >
                                                             <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
@@ -399,10 +405,10 @@ const DashboardHome = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="border-t border-slate-600/30 pt-6">
-                                                    <h4 className="text-base font-bold text-white mb-4 flex items-center">
+                                                <div className="border-t border-slate-600/30 pt-4 sm:pt-6">
+                                                    <h4 className="text-sm sm:text-base font-bold text-white mb-3 sm:mb-4 flex items-center">
                                                         <svg
-                                                            className="w-5 h-5 mr-3 text-lime-400"
+                                                            className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-lime-400 flex-shrink-0"
                                                             fill="none"
                                                             stroke="currentColor"
                                                             viewBox="0 0 24 24"
@@ -414,18 +420,18 @@ const DashboardHome = () => {
                                                                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                                                             />
                                                         </svg>
-                                                        Historique Minute par Minute
+                                                        <span className="truncate">Historique Minute par Minute</span>
                                                     </h4>
-                                                    <div className="bg-slate-900/50 rounded-xl border border-slate-700/30 p-4 lg:p-6">
+                                                    <div className="bg-slate-900/50 rounded-xl border border-slate-700/30 p-2 sm:p-4 lg:p-6">
                                                         <div className="relative">
-                                                            <div className="h-[280px] w-full">
+                                                            <div className="h-[200px] sm:h-[240px] lg:h-[280px] w-full">
                                                                 {(() => {
                                                                     const chartData = generateMinuteHistory(progressData)
                                                                     const currentMinute = Math.floor(progressData.elapsedTime / (1000 * 60)) + 1
 
                                                                     return (
                                                                         <ResponsiveContainer width="100%" height="100%">
-                                                                            <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                                                                                 <defs>
                                                                                     <linearGradient id="capitalGradient" x1="0" y1="0" x2="0" y2="1">
                                                                                         <stop offset="0%" stopColor="#84cc16" stopOpacity={0.8} />
@@ -444,7 +450,7 @@ const DashboardHome = () => {
                                                                                     dataKey="minute"
                                                                                     axisLine={false}
                                                                                     tickLine={false}
-                                                                                    tick={{ fill: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}
+                                                                                    tick={{ fill: "#94a3b8", fontSize: 9, fontFamily: "monospace" }}
                                                                                     tickFormatter={(value) => `${value}m`}
                                                                                     interval="preserveStartEnd"
                                                                                 />
@@ -452,7 +458,7 @@ const DashboardHome = () => {
                                                                                 <YAxis
                                                                                     axisLine={false}
                                                                                     tickLine={false}
-                                                                                    tick={{ fill: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}
+                                                                                    tick={{ fill: "#94a3b8", fontSize: 9, fontFamily: "monospace" }}
                                                                                     tickFormatter={(value) => `€${value.toFixed(0)}`}
                                                                                     domain={["dataMin - 10", "dataMax + 10"]}
                                                                                 />
@@ -463,7 +469,7 @@ const DashboardHome = () => {
                                                                                         border: "1px solid #475569",
                                                                                         borderRadius: "8px",
                                                                                         color: "#f1f5f9",
-                                                                                        fontSize: "12px",
+                                                                                        fontSize: "11px",
                                                                                         fontFamily: "monospace",
                                                                                     }}
                                                                                     formatter={(value, name) => [
@@ -477,7 +483,7 @@ const DashboardHome = () => {
                                                                                     type="monotone"
                                                                                     dataKey="capital"
                                                                                     stroke="#84cc16"
-                                                                                    strokeWidth={3}
+                                                                                    strokeWidth={2}
                                                                                     fill="url(#capitalGradient)"
                                                                                     fillOpacity={(entry) => (entry?.isPast ? 0.6 : 0.1)}
                                                                                     dot={(props) => {
@@ -488,7 +494,7 @@ const DashboardHome = () => {
                                                                                             <circle
                                                                                                 cx={cx}
                                                                                                 cy={cy}
-                                                                                                r={payload.isCurrent ? 6 : payload.isPast ? 4 : 2}
+                                                                                                r={payload.isCurrent ? 5 : payload.isPast ? 3 : 2}
                                                                                                 fill={
                                                                                                     payload.isCurrent ? "#84cc16" : payload.isPast ? "#22c55e" : "#64748b"
                                                                                                 }
@@ -499,7 +505,7 @@ const DashboardHome = () => {
                                                                                         )
                                                                                     }}
                                                                                     activeDot={{
-                                                                                        r: 6,
+                                                                                        r: 5,
                                                                                         fill: "#84cc16",
                                                                                         stroke: "#1e293b",
                                                                                         strokeWidth: 2,
@@ -511,23 +517,25 @@ const DashboardHome = () => {
                                                                 })()}
                                                             </div>
 
-                                                            <div className="absolute top-4 right-4 bg-slate-800/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-lime-400/30">
+                                                            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-slate-800/80 backdrop-blur-sm rounded-lg px-2 py-1 sm:px-3 sm:py-2 border border-lime-400/30">
                                                                 <div className="text-xs text-gray-400 mb-1">TEMPS ÉCOULÉ</div>
-                                                                <div className="text-lime-400 font-mono font-bold">
+                                                                <div className="text-lime-400 font-mono font-bold text-xs sm:text-sm">
                                                                     {formatDuration(progressData.elapsedTime)}
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        <div className="mt-6 pt-4 border-t border-slate-600/30">
-                                                            <div className="grid grid-cols-2 gap-4">
-                                                                <div className="text-center p-3 bg-slate-800/50 rounded-lg">
+                                                        <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-600/30">
+                                                            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                                                                <div className="text-center p-2 sm:p-3 bg-slate-800/50 rounded-lg">
                                                                     <div className="text-gray-400 text-xs font-medium mb-1">DÉBUT</div>
-                                                                    <div className="text-white font-mono font-bold">€{progressData.investedAmount}</div>
+                                                                    <div className="text-white font-mono font-bold text-sm sm:text-base">
+                                                                        €{progressData.investedAmount}
+                                                                    </div>
                                                                 </div>
-                                                                <div className="text-center p-3 bg-lime-400/10 rounded-lg border border-lime-400/20">
+                                                                <div className="text-center p-2 sm:p-3 bg-lime-400/10 rounded-lg border border-lime-400/20">
                                                                     <div className="text-gray-400 text-xs font-medium mb-1">ACTUEL</div>
-                                                                    <div className="text-lime-400 font-mono font-bold text-lg">
+                                                                    <div className="text-lime-400 font-mono font-bold text-sm sm:text-base lg:text-lg">
                                                                         €{(progressData.investedAmount + progressData.currentGains).toFixed(2)}
                                                                     </div>
                                                                 </div>
@@ -536,8 +544,8 @@ const DashboardHome = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-6 pt-4 border-t border-slate-600/30">
-                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-sm">
+                                                <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-600/30">
+                                                    <div className="flex flex-col gap-2 text-xs sm:text-sm">
                                                         <span className="text-gray-400">
                                                             Investissement:{" "}
                                                             <span className="text-white font-semibold">€{progressData.investedAmount}</span>
@@ -552,10 +560,10 @@ const DashboardHome = () => {
                                         )}
 
                                         {activity.status !== "started" && activity.progress > 0 && (
-                                            <div className="mt-4">
-                                                <div className="w-full bg-gray-700 rounded-full h-3">
+                                            <div className="mt-3 sm:mt-4">
+                                                <div className="w-full bg-gray-700 rounded-full h-2 sm:h-3">
                                                     <div
-                                                        className="bg-lime-400 h-3 rounded-full transition-all duration-300"
+                                                        className="bg-lime-400 h-2 sm:h-3 rounded-full transition-all duration-300"
                                                         style={{ width: `${activity.progress}%` }}
                                                     ></div>
                                                 </div>
@@ -570,59 +578,65 @@ const DashboardHome = () => {
             </div>
 
             {showPackageModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-800/95 backdrop-blur-xl border border-slate-600/30 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-4 lg:p-8">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-2xl lg:text-3xl font-bold text-white">Choisir un Package</h2>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+                    <div className="bg-slate-800/95 backdrop-blur-xl border border-slate-600/30 rounded-2xl max-w-5xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                        <div className="p-3 sm:p-4 lg:p-8">
+                            <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
+                                <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold text-white">Choisir un Package</h2>
                                 <button
                                     onClick={() => setShowPackageModal(false)}
-                                    className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-slate-700/50 rounded-lg"
+                                    className="text-gray-400 hover:text-white transition-colors p-1 sm:p-2 hover:bg-slate-700/50 rounded-lg flex-shrink-0"
                                 >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                                 {packages.map((pkg, index) => (
                                     <div key={index} className="relative group transform transition-all duration-300 hover:scale-105">
                                         <div className="relative bg-gradient-to-b from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-600/30 overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300">
                                             {pkg.popular && (
-                                                <div className="absolute top-4 right-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-bold z-20 shadow-lg shadow-purple-500/25 animate-pulse">
+                                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-bold z-20 shadow-lg shadow-purple-500/25 animate-pulse">
                                                     POPULAIRE
                                                 </div>
                                             )}
 
-                                            <div className="relative p-6 lg:p-8 z-10">
-                                                <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 font-mono tracking-wide">
+                                            <div className="relative p-4 sm:p-6 lg:p-8 z-10">
+                                                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide">
                                                     {pkg.title}
                                                 </h3>
-                                                <p className="text-slate-400 text-sm lg:text-base mb-6 leading-relaxed">{pkg.subtitle}</p>
+                                                <p className="text-slate-400 text-xs sm:text-sm lg:text-base mb-4 sm:mb-6 leading-relaxed">
+                                                    {pkg.subtitle}
+                                                </p>
 
-                                                <div className="space-y-4 mb-8">
-                                                    <div className="flex justify-between items-center p-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
+                                                <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+                                                    <div className="flex justify-between items-center p-3 sm:p-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
                                                         <span className="text-slate-400 font-mono text-xs lg:text-sm">INVESTISSEMENT</span>
-                                                        <span className="font-bold text-white font-mono text-lg">
+                                                        <span className="font-bold text-white font-mono text-sm sm:text-base lg:text-lg">
                                                             €{pkg.investment.toLocaleString()}
                                                         </span>
                                                     </div>
-                                                    <div className="flex justify-between items-center p-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
+                                                    <div className="flex justify-between items-center p-3 sm:p-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
                                                         <span className="text-slate-400 font-mono text-xs lg:text-sm">GAIN ESTIMÉ</span>
-                                                        <span className={`font-bold text-${pkg.glowColor} font-mono text-lg`}>
+                                                        <span
+                                                            className={`font-bold text-${pkg.glowColor} font-mono text-sm sm:text-base lg:text-lg`}
+                                                        >
                                                             €{pkg.returns.toLocaleString()}
                                                         </span>
                                                     </div>
-                                                    <div className="flex justify-between items-center p-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
+                                                    <div className="flex justify-between items-center p-3 sm:p-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
                                                         <span className="text-slate-400 font-mono text-xs lg:text-sm">DURÉE</span>
-                                                        <span className="font-bold text-white font-mono text-lg">{pkg.timeframe}</span>
+                                                        <span className="font-bold text-white font-mono text-sm sm:text-base lg:text-lg">
+                                                            {pkg.timeframe}
+                                                        </span>
                                                     </div>
                                                 </div>
 
                                                 <button
                                                     onClick={() => handlePackageSelect(pkg)}
-                                                    className={`w-full bg-gradient-to-r ${pkg.accentColor} hover:shadow-lg hover:shadow-${pkg.glowColor}/25 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 font-mono tracking-wider text-lg`}
+                                                    className={`w-full bg-gradient-to-r ${pkg.accentColor} hover:shadow-lg hover:shadow-${pkg.glowColor}/25 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-300 transform hover:scale-105 font-mono tracking-wider text-sm sm:text-base lg:text-lg`}
                                                 >
                                                     CHOISIR
                                                 </button>

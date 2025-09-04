@@ -17,7 +17,7 @@ const Investments = () => {
     const [selectedInvestment, setSelectedInvestment] = useState(null)
     const [withdrawalData, setWithdrawalData] = useState({
         amount: "",
-        network: "BTC",
+        network: "SOL",
         walletAddress: "",
     })
     const [withdrawalLoading, setWithdrawalLoading] = useState(false)
@@ -169,7 +169,7 @@ const Investments = () => {
         setSelectedInvestment(investment)
         setWithdrawalData({
             amount: investment.expectedReturn.replace("€", "").replace(",", ""),
-            network: "BTC",
+            network: "SOL",
             walletAddress: "",
         })
         setWithdrawalStep("form")
@@ -179,7 +179,7 @@ const Investments = () => {
     const closeWithdrawModal = () => {
         setShowWithdrawModal(false)
         setSelectedInvestment(null)
-        setWithdrawalData({ amount: "", network: "BTC", walletAddress: "" })
+        setWithdrawalData({ amount: "", network: "SOL", walletAddress: "" })
         setWithdrawalStep("form")
         setWithdrawalPayment(null)
         setVerificationPayment(null)
@@ -719,9 +719,10 @@ const Investments = () => {
                                         onChange={(e) => setWithdrawalData({ ...withdrawalData, network: e.target.value })}
                                         className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
                                     >
-                                        <option value="BTC">Bitcoin (BTC)</option>
+                                        <option value="BTC">Solana (SOL)</option>
                                         <option value="ETH">Ethereum (ETH)</option>
-                                        <option value="TRC">Tron (TRC20)</option>
+                                        <option value="USDT">USDT (ETH)</option>
+                                        <option value="USDC">USDC (ETH)</option>
                                     </select>
                                 </div>
 
