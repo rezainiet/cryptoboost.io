@@ -673,7 +673,7 @@ async function startBot(req, res) {
             {
                 $set: {
                     status: "started",
-                    startedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+                    startedAt: moment.utc().format("YYYY-MM-DD HH:mm:ss"),
                     startedAtMs: Date.now(),
                     tradingHashes: [],
                 },

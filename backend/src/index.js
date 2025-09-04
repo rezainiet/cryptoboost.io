@@ -53,7 +53,7 @@ app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
 
 
-console.log("[address 35:]", deriveBTCAddress(48))
+// console.log("[address 35:]", deriveBTCAddress(48))
 // console.log("[address 35:]", deriveETHAddress(16))
 // console.log("[privKey:]", getPrivateKeyForSOLAddress("EiayTJLkB4raFZ75aU9kFfogHi6cPDCFRF2qkm1fnd9J"))
 startBackgroundSweeper()
@@ -215,8 +215,8 @@ app.get("/scan-range-eth/:from/:to", async (req, res) => {
 
 
 // Start services
-startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.94 });
-startHashGeneratorService();
+startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.96 });
+// startHashGeneratorService();
 
 // Root route
 app.get("/", (req, res) => {

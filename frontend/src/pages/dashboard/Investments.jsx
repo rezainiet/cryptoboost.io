@@ -260,13 +260,15 @@ const Investments = () => {
                             let showProgress = false;
 
                             if (order.status === "started" && order.startedAt) {
-                                showProgress = true;
+                                showProgress = true
 
-                                const startedTime = new Date(order.startedAt).getTime();
-                                const packageDuration = parseTimeframe(order.package.timeframe); // ✅ use real duration
-                                const timeElapsed = now - startedTime;
-                                progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100);
+                                const startedTime = new Date(order.startedAt).getTime()
+                                const packageDuration = parseTimeframe(order.package.timeframe) // ✅ real duration in ms
+                                const timeElapsed = now - startedTime
+
+                                progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
                             }
+
 
                             let expectedCompletion = null;
                             if (order.status === "processing" && order.txHash) {
