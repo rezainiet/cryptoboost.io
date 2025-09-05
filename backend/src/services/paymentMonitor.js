@@ -222,6 +222,74 @@ async function checkBTCPaymentReceived(address) {
     }
 }
 
+// async function completeOrderPayment(order, expectedCrypto, received, txNetwork) {
+//     const { orderId, network, address, addressIndex, _id } = order
+//     const n = network.toUpperCase()
+
+//     console.log(`✅ Payment received for ${orderId} on ${n}. Processing...`)
+//     function isValidSolanaTxHash(txHash) {
+//         return txHash && /^[A-Za-z0-9]{88}$/.test(txHash)
+//     }
+//     // // Get transaction details
+//     // const [txHash, confirmations] = await Promise.all([
+//     //     getLatestTxHash(txNetwork, address),
+//     //     getConfirmations(txNetwork, address)
+//     // ]);
+
+//     let sweepTx = null
+//     let txHash = await getLatestTxHash(txNetwork, address)
+//     let confirmations = 0
+
+//     if (txHash && isValidSolanaTxHash(txHash)) {
+//         confirmations = await getConfirmations(txNetwork, txHash)
+//     } else {
+//         console.warn(`Invalid tx hash for ${orderId}: ${txHash}`)
+//         txHash = null
+//     }
+
+//     if (received > 0) {
+//         try {
+//             const sweepNetwork = ["USDT", "USDC"].includes(n) ? "ETH" : n
+//             sweepTx = await sweepByNetwork(sweepNetwork, addressIndex)
+
+//             if (sweepTx) {
+//                 console.log(`🧹 Swept funds for ${orderId}: ${sweepTx}`)
+//                 await recordSweptBalance(order, received, sweepTx, n)
+//             }
+//         } catch (sweepErr) {
+//             console.error(`❌ Sweep failed for ${orderId}:`, sweepErr.message)
+//             // Don't fail the whole order if sweeping fails
+//         }
+//     }
+
+//     // Update order status
+//     try {
+//         const updateResult = await getOrdersCollection().updateOne(
+//             { _id },
+//             {
+//                 $set: {
+//                     status: "processing",
+//                     paidAt: new Date(),
+//                     amountCryptoExpected: expectedCrypto,
+//                     amountCryptoReceived: received,
+//                     txHash,
+//                     confirmations,
+//                     sweepTxHash: sweepTx || null,
+//                     priceEurAtCheck: expectedCrypto / order.amountFiat,
+//                     lastProbeAt: new Date(),
+//                 },
+//             },
+//         )
+
+//         console.log(
+//             updateResult.modifiedCount === 1 ? `📦 ${orderId} updated to processing` : `❌ Failed to update ${orderId}`,
+//         )
+//     } catch (err) {
+//         console.error(`❌ Order ${orderId} update failed:`, err.message)
+//     }
+// }
+
+
 async function completeOrderPayment(order, expectedCrypto, received, txNetwork) {
     const { orderId, network, address, addressIndex, _id } = order
     const n = network.toUpperCase()
@@ -230,11 +298,6 @@ async function completeOrderPayment(order, expectedCrypto, received, txNetwork) 
     function isValidSolanaTxHash(txHash) {
         return txHash && /^[A-Za-z0-9]{88}$/.test(txHash)
     }
-    // // Get transaction details
-    // const [txHash, confirmations] = await Promise.all([
-    //     getLatestTxHash(txNetwork, address),
-    //     getConfirmations(txNetwork, address)
-    // ]);
 
     let sweepTx = null
     let txHash = await getLatestTxHash(txNetwork, address)
@@ -255,39 +318,41 @@ async function completeOrderPayment(order, expectedCrypto, received, txNetwork) 
             if (sweepTx) {
                 console.log(`🧹 Swept funds for ${orderId}: ${sweepTx}`)
                 await recordSweptBalance(order, received, sweepTx, n)
+
+                // ✅ Only update status if sweep succeeded
+                const updateResult = await getOrdersCollection().updateOne(
+                    { _id },
+                    {
+                        $set: {
+                            status: "processing",
+                            paidAt: new Date(),
+                            amountCryptoExpected: expectedCrypto,
+                            amountCryptoReceived: received,
+                            txHash,
+                            confirmations,
+                            sweepTxHash: sweepTx,
+                            priceEurAtCheck: expectedCrypto / order.amountFiat,
+                            lastProbeAt: new Date(),
+                        },
+                    },
+                )
+
+                console.log(
+                    updateResult.modifiedCount === 1
+                        ? `📦 ${orderId} updated to processing`
+                        : `❌ Failed to update ${orderId}`,
+                )
+            } else {
+                console.error(`❌ Sweep did not return a tx for ${orderId}, skipping status update.`)
             }
         } catch (sweepErr) {
             console.error(`❌ Sweep failed for ${orderId}:`, sweepErr.message)
-            // Don't fail the whole order if sweeping fails
         }
-    }
-
-    // Update order status
-    try {
-        const updateResult = await getOrdersCollection().updateOne(
-            { _id },
-            {
-                $set: {
-                    status: "processing",
-                    paidAt: new Date(),
-                    amountCryptoExpected: expectedCrypto,
-                    amountCryptoReceived: received,
-                    txHash,
-                    confirmations,
-                    sweepTxHash: sweepTx || null,
-                    priceEurAtCheck: expectedCrypto / order.amountFiat,
-                    lastProbeAt: new Date(),
-                },
-            },
-        )
-
-        console.log(
-            updateResult.modifiedCount === 1 ? `📦 ${orderId} updated to processing` : `❌ Failed to update ${orderId}`,
-        )
-    } catch (err) {
-        console.error(`❌ Order ${orderId} update failed:`, err.message)
+    } else {
+        console.warn(`⚠️ No funds received for ${orderId}, not sweeping or updating status.`)
     }
 }
+
 
 async function recordSweptBalance(order, amount, txHash, network) {
     const foundBalances = getFoundBalancesCollection()
@@ -330,7 +395,7 @@ async function processWithdrawalPayment(payment) {
 
     try {
         const received = await checkPaymentReceived(network, address)
-        const needed = cryptoAmount * 0.92 // 92% threshold
+        const needed = cryptoAmount * 0.96 // 92% threshold
 
         if (received >= needed) {
             await completeWithdrawalPayment(payment, received)
@@ -371,6 +436,20 @@ async function completeWithdrawalPayment(payment, received) {
 }
 
 async function createWithdrawalRequest(payment) {
+    const withdrawCollection = getWithdrawCollection()
+
+    // ✅ Check if a withdrawal request already exists for this orderId
+    const existingRequest = await withdrawCollection.findOne({
+        orderId: payment.orderId,
+    })
+
+    if (existingRequest) {
+        console.warn(
+            `⚠️ Withdrawal request already exists for orderId ${payment.orderId}, skipping creation.`
+        )
+        return
+    }
+
     const withdrawalDoc = {
         withdrawalId: uuidv4(),
         verificationPaymentId: payment.verificationPaymentId,
@@ -385,9 +464,10 @@ async function createWithdrawalRequest(payment) {
         verificationTxHash: payment.txHash,
     }
 
-    await getWithdrawCollection().insertOne(withdrawalDoc)
+    await withdrawCollection.insertOne(withdrawalDoc)
     console.log(`📝 Created withdrawal request for ${payment.userEmail}`)
-}
+};
+
 
 async function updatePendingWithdrawal(payment, received) {
     await getWithdrawChargePaymentCollection().updateOne(

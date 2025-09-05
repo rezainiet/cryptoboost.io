@@ -16,6 +16,7 @@ const DashboardHome = () => {
     const [error, setError] = useState(null)
     const [showPackageModal, setShowPackageModal] = useState(false)
     const [currentTime, setCurrentTime] = useState(Date.now())
+    const [transactionHashes, setTransactionHashes] = useState([])
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -24,6 +25,55 @@ const DashboardHome = () => {
 
         return () => clearInterval(interval)
     }, [])
+
+    useEffect(() => {
+        const hasActiveInvestments = activities.some((activity) => activity.status === "started")
+
+        if (!hasActiveInvestments) {
+            setTransactionHashes([])
+            return
+        }
+
+        const generateHash = () => {
+            const chars = "0123456789abcdef"
+            let hash = "0x"
+            for (let i = 0; i < 64; i++) {
+                hash += chars[Math.floor(Math.random() * chars.length)]
+            }
+            return hash
+        }
+
+        const interval = setInterval(
+            () => {
+                const newHash = {
+                    id: Date.now(),
+                    hash: generateHash(),
+                    timestamp: new Date().toLocaleTimeString(),
+                    fadeOut: false,
+                }
+
+                setTransactionHashes((prev) => {
+                    const updated = [newHash, ...prev]
+
+                    // Mark old hashes for fade out if we have more than 5
+                    if (updated.length > 5) {
+                        const toFadeOut = updated.slice(5).map((h) => ({ ...h, fadeOut: true }))
+                        return [...updated.slice(0, 5), ...toFadeOut]
+                    }
+
+                    return updated
+                })
+
+                // Remove faded out hashes after animation
+                setTimeout(() => {
+                    setTransactionHashes((prev) => prev.filter((h) => !h.fadeOut))
+                }, 500)
+            },
+            3000 + Math.random() * 2000,
+        ) // Random interval between 3-5 seconds
+
+        return () => clearInterval(interval)
+    }, [activities])
 
     const calculateInvestmentProgress = (investment) => {
         if (investment.status !== "started" || !investment.startedAtMs || !investment.expectedCompletion) {
@@ -372,12 +422,12 @@ const DashboardHome = () => {
                                                     <p className="text-white font-bold text-base sm:text-lg lg:text-xl">{activity.amount}</p>
                                                     <p
                                                         className={`text-xs sm:text-sm font-medium ${activity.displayStatus === "Confirmé" || activity.displayStatus === "Reçu"
-                                                            ? "text-emerald-400"
-                                                            : activity.displayStatus === "En attente"
-                                                                ? "text-yellow-400"
-                                                                : activity.displayStatus === "Actif"
-                                                                    ? "text-lime-400"
-                                                                    : "text-blue-400"
+                                                                ? "text-emerald-400"
+                                                                : activity.displayStatus === "En attente"
+                                                                    ? "text-yellow-400"
+                                                                    : activity.displayStatus === "Actif"
+                                                                        ? "text-lime-400"
+                                                                        : "text-blue-400"
                                                             }`}
                                                     >
                                                         {activity.displayStatus}
@@ -540,6 +590,54 @@ const DashboardHome = () => {
                                                                     </div>
                                                                 </div>
                                                             </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-slate-600/30">
+                                                        <h5 className="text-sm font-bold text-white mb-3 flex items-center">
+                                                            <svg
+                                                                className="w-4 h-4 mr-2 text-lime-400 flex-shrink-0"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                                                />
+                                                            </svg>
+                                                            <span>Transactions en Temps Réel</span>
+                                                        </h5>
+                                                        <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/20 max-h-40 overflow-hidden">
+                                                            {transactionHashes.length === 0 ? (
+                                                                <div className="text-center py-4">
+                                                                    <div className="text-gray-500 text-xs">En attente de transactions...</div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-2">
+                                                                    {transactionHashes.slice(0, 5).map((tx) => (
+                                                                        <div
+                                                                            key={tx.id}
+                                                                            className={`flex items-center justify-between p-2 bg-slate-900/50 rounded border border-slate-600/20 transition-all duration-500 ${tx.fadeOut
+                                                                                    ? "opacity-0 transform translate-x-full"
+                                                                                    : "opacity-100 transform translate-x-0"
+                                                                                }`}
+                                                                        >
+                                                                            <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                                                                <div className="w-2 h-2 bg-lime-400 rounded-full animate-pulse flex-shrink-0"></div>
+                                                                                <span className="text-xs font-mono text-gray-300 truncate">
+                                                                                    {tx.hash.slice(0, 10)}...{tx.hash.slice(-8)}
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className="text-xs text-gray-500 font-mono flex-shrink-0 ml-2">
+                                                                                {tx.timestamp}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

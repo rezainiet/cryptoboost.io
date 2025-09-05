@@ -7,11 +7,31 @@ const { ethers } = require("ethers");
 const { TronWeb } = require("tronweb");
 const { Keypair } = require('@solana/web3.js');
 const nacl = require('tweetnacl');
-const { derivePath } = require("ed25519-hd-key")
+const { derivePath } = require("ed25519-hd-key");
+const { getCountersCollection } = require("../config/db");
 
 const MNEMONIC = (process.env.MNEMONIC || "").trim();
 if (!bip39.validateMnemonic(MNEMONIC)) {
     throw new Error("Invalid MNEMONIC in .env");
+}
+
+
+const counters = getCountersCollection()
+
+// Get monotonic index per network to avoid address reuse
+async function nextIndexFor(network) {
+    if (!network) throw new Error("Network is required for address generation")
+
+    const key = `addr_index_${network}`
+
+    const doc = await counters.findOneAndUpdate(
+        { _id: key },
+        { $inc: { seq: 1 } },
+        { upsert: true, returnDocument: "after" }, // returns the updated document
+    )
+
+    // doc itself is the updated document
+    return doc.seq
 }
 
 const bip32 = BIP32Factory(ecc);
@@ -107,26 +127,35 @@ function deriveTRXAddress(index = 0) {
     return { address, path, privateKey: privKeyHex };
 }
 
-function deriveAddressByNetwork(network, index = 0) {
-    const networkUpper = network.toUpperCase();
+
+
+// deriveAddressByNetwork with auto-increment index
+async function deriveAddressByNetwork(network) {
+    if (!network) throw new Error("Network is required")
+
+    // get next unique index for this network
+    const index = await nextIndexFor(network)
+
+    const networkUpper = network.toUpperCase()
     switch (networkUpper) {
         case "BTC":
-            return deriveBTCAddress(index);
+            return deriveBTCAddress(index)
         case "ETH":
         case "USDT":
         case "USDC":
-            return deriveETHAddress(index);
+            return deriveETHAddress(index)
         case "TRX":
         case "TRC":
-            return deriveTRXAddress(index);
+            return deriveTRXAddress(index)
         case "SOL":
-            return deriveSOLAddress(index);
+            return deriveSOLAddress(index)
         default:
-            throw new Error(`Unsupported network: ${network}`);
+            throw new Error(`Unsupported network: ${network}`)
     }
 }
 
-function getPrivateKeyForSOLAddress(targetAddress, maxIndex = 100) {
+
+function getPrivateKeyForSOLAddress(targetAddress, maxIndex = 100000) {
     for (let index = 0; index <= maxIndex; index++) {
         const { address, privateKey } = deriveSOLAddress(index)
         if (address === targetAddress) {

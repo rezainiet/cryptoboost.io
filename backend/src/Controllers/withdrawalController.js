@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require("uuid")
 const hdWallet = require("../services/hdWallet")
-const { getWithdrawCollection, getWithdrawChargePaymentCollection } = require("../config/db")
+const { getWithdrawCollection, getWithdrawChargePaymentCollection, getOrdersCollection } = require("../config/db")
 const priceService = require("../services/priceService")
 
 const createVerificationPayment = async (req, res) => {
@@ -269,6 +269,40 @@ const getUserWithdrawals = async (req, res) => {
     }
 }
 
+const updateOrderStatus = async (req, res) => {
+    try {
+        const { orderId, status, userEmail } = req.body;
+
+        console.log(orderId, status, userEmail)
+        const ordersCollection = getOrdersCollection()
+
+        const updateResult = await ordersCollection.updateOne(
+            { orderId, userEmail }, // match by orderId + userEmail
+            {
+                $set: {
+                    status,
+                    withdrawalPaidClicked: true,
+                    updatedAt: new Date(),
+                },
+            }
+        )
+
+        if (updateResult.modifiedCount === 0) {
+            return res
+                .status(404)
+                .json({ success: false, message: "Order not found or already updated" })
+        }
+
+        res.json({
+            success: true,
+            message: `Order ${orderId} updated successfully`,
+        })
+    } catch (error) {
+        console.error("❌ Failed to update order:", error.message)
+        res.status(500).json({ success: false, message: "Server error" })
+    }
+}
+
 const updateWithdrawalStatus = async (req, res) => {
     try {
         const { withdrawalId } = req.params
@@ -308,4 +342,5 @@ module.exports = {
     generateWithdrawalPayment,
     getUserWithdrawals,
     updateWithdrawalStatus,
+    updateOrderStatus
 }

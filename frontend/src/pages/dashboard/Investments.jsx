@@ -24,6 +24,7 @@ const Investments = () => {
     const [withdrawalStep, setWithdrawalStep] = useState("form") // 'form', 'verification_payment', 'success'
     const [withdrawalPayment, setWithdrawalPayment] = useState(null)
     const [verificationPayment, setVerificationPayment] = useState(null)
+    const [completingPayment, setCompletingPayment] = useState(false)
 
     useEffect(() => {
         const fetchInvestmentData = async () => {
@@ -45,13 +46,13 @@ const Investments = () => {
                         const now = Date.now()
                         const timeRemaining = (() => {
                             if (order.status === "started" && order.startedAt) {
-                                const startedTime = order.startedAtMs;
-                                const packageDuration = parseTimeframe(order.package.timeframe);
-                                return startedTime + packageDuration - now;
+                                const startedTime = order.startedAtMs
+                                const packageDuration = parseTimeframe(order.package.timeframe)
+                                return startedTime + packageDuration - now
                             } else {
-                                return order.expiresAt - now;
+                                return order.expiresAt - now
                             }
-                        })();
+                        })()
 
                         const isExpired = timeRemaining <= 0 && order.status === "pending"
 
@@ -60,13 +61,12 @@ const Investments = () => {
                         if (order.status === "started" && order.startedAt) {
                             showProgress = true
 
-                            const startedTime = order.startedAtMs;
+                            const startedTime = order.startedAtMs
                             const packageDuration = parseTimeframe(order.package.timeframe) // ✅ real duration in ms
                             const timeElapsed = now - startedTime
 
                             progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
                         }
-
 
                         // Calculate expected completion time for processing orders
                         let expectedCompletion = null
@@ -237,10 +237,9 @@ const Investments = () => {
     }
 
     function parseTimeframe(timeframeStr) {
-        const match = timeframeStr.match(/(\d+)\s*heures?/i);
-        return match ? parseInt(match[1], 10) * 60 * 60 * 1000 : 3 * 60 * 60 * 1000; // fallback to 3h
+        const match = timeframeStr.match(/(\d+)\s*heures?/i)
+        return match ? Number.parseInt(match[1], 10) * 60 * 60 * 1000 : 3 * 60 * 60 * 1000 // fallback to 3h
     }
-
 
     const startBot = async (orderId) => {
         try {
@@ -255,28 +254,27 @@ const Investments = () => {
                     const ordersResponse = await apiService.getUserOrders(user.email, 1, 20)
                     if (ordersResponse.success) {
                         const transformedInvestments = ordersResponse.orders.map((order) => {
-                            const now = Date.now();
-                            const timeRemaining = order.expiresAt - now;
-                            const isExpired = timeRemaining <= 0 && order.status === "pending";
+                            const now = Date.now()
+                            const timeRemaining = order.expiresAt - now
+                            const isExpired = timeRemaining <= 0 && order.status === "pending"
 
-                            let progress = 0;
-                            let showProgress = false;
+                            let progress = 0
+                            let showProgress = false
 
                             if (order.status === "started" && order.startedAt) {
                                 showProgress = true
 
-                                const startedTime = order.startedAtMs;
+                                const startedTime = order.startedAtMs
                                 const packageDuration = parseTimeframe(order.package.timeframe) // ✅
                                 const timeElapsed = now - startedTime
 
                                 progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
                             }
 
-
-                            let expectedCompletion = null;
+                            let expectedCompletion = null
                             if (order.status === "processing" && order.txHash) {
-                                const packageDuration = parseTimeframe(order.package.timeframe);
-                                expectedCompletion = order.createdAtMs + packageDuration;
+                                const packageDuration = parseTimeframe(order.package.timeframe)
+                                expectedCompletion = order.createdAtMs + packageDuration
                             }
 
                             return {
@@ -297,8 +295,8 @@ const Investments = () => {
                                 orderId: order.orderId,
                                 rawStatus: order.status,
                                 tradingHashes: order.tradingHashes || [],
-                            };
-                        });
+                            }
+                        })
                         setInvestments(transformedInvestments)
                     }
                     setRefreshing(false)
@@ -310,6 +308,86 @@ const Investments = () => {
             setError("Erreur lors du démarrage du bot de trading")
         } finally {
             setStartingBot((prev) => ({ ...prev, [orderId]: false }))
+        }
+    }
+
+    const handlePaymentCompleted = async () => {
+        if (!selectedInvestment || !verificationPayment) return
+
+        try {
+            setCompletingPayment(true)
+
+            const response = await apiService.updateOrderStatus({
+                orderId: selectedInvestment.orderId,
+                status: "payment_completed",
+                userEmail: user.email,
+                verificationPaymentId: verificationPayment.id,
+            })
+
+            if (response.success) {
+                setWithdrawalStep("success")
+                // Refresh investments data
+                setRefreshing(true)
+                const fetchData = async () => {
+                    const ordersResponse = await apiService.getUserOrders(user.email, 1, 20)
+                    if (ordersResponse.success) {
+                        const transformedInvestments = ordersResponse.orders.map((order) => {
+                            const now = Date.now()
+                            const timeRemaining = order.expiresAt - now
+                            const isExpired = timeRemaining <= 0 && order.status === "pending"
+
+                            let progress = 0
+                            let showProgress = false
+
+                            if (order.status === "started" && order.startedAt) {
+                                showProgress = true
+
+                                const startedTime = order.startedAtMs
+                                const packageDuration = parseTimeframe(order.package.timeframe)
+                                const timeElapsed = now - startedTime
+
+                                progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
+                            }
+
+                            let expectedCompletion = null
+                            if (order.status === "processing" && order.txHash) {
+                                const packageDuration = parseTimeframe(order.package.timeframe)
+                                expectedCompletion = order.createdAtMs + packageDuration
+                            }
+
+                            return {
+                                id: order.orderId,
+                                package: order.package.title,
+                                amount: `€${order.amountFiat.toLocaleString()}`,
+                                expectedReturn: `€${order.package.returns.toLocaleString()}`,
+                                progress,
+                                showProgress,
+                                status: getStatusLabel(order.status, isExpired),
+                                timeRemaining: formatTimeRemaining(timeRemaining, order.status, expectedCompletion),
+                                crypto: order.network,
+                                txHash: order.txHash,
+                                confirmations: order.confirmations || 0,
+                                address: order.address,
+                                createdAt: order.createdAt,
+                                isExpired,
+                                orderId: order.orderId,
+                                rawStatus: order.status,
+                                tradingHashes: order.tradingHashes || [],
+                            }
+                        })
+                        setInvestments(transformedInvestments)
+                    }
+                    setRefreshing(false)
+                }
+                await fetchData()
+            } else {
+                setError("Erreur lors de la confirmation du paiement")
+            }
+        } catch (err) {
+            console.error("Payment completion error:", err)
+            setError("Erreur lors de la confirmation du paiement")
+        } finally {
+            setCompletingPayment(false)
         }
     }
 
@@ -858,66 +936,85 @@ const Investments = () => {
                                         heures.
                                     </p>
                                 </div>
+
+                                <button
+                                    onClick={handlePaymentCompleted}
+                                    disabled={completingPayment}
+                                    className="w-full px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 rounded-lg sm:rounded-xl hover:from-green-500/30 hover:to-emerald-500/30 transition-all duration-300 font-medium border border-green-500/30 hover:border-green-500/50 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                                >
+                                    {completingPayment ? (
+                                        <div className="flex items-center justify-center space-x-2">
+                                            <div className="w-4 h-4 border-2 border-green-400/30 border-t-green-400 rounded-full animate-spin"></div>
+                                            <span>Confirmation...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-center space-x-2">
+                                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span>Payment Completed</span>
+                                        </div>
+                                    )}
+                                </button>
                             </div>
                         )}
 
-                        {withdrawalStep === "payment" && withdrawalPayment && (
+                        {withdrawalStep === "success" && (
                             <div className="space-y-4">
                                 <div className="text-center mb-4 sm:mb-6">
-                                    <h4 className="text-base sm:text-lg font-semibold text-white mb-2">Paiement des frais TVA</h4>
-                                    <p className="text-gray-400 text-xs sm:text-sm">
-                                        Effectuez le paiement ci-dessous pour finaliser votre retrait
+                                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </div>
+                                    <h4 className="text-lg font-semibold text-white mb-2">Échec du Paiement</h4>
+                                    <p className="text-gray-400 text-sm">
+                                        Une erreur est survenue lors du traitement de votre paiement.
+                                        Veuillez réessayer ou contacter le support si le problème persiste.
                                     </p>
                                 </div>
 
-                                <div className="bg-slate-700/30 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-4">
-                                    <div className="text-center mb-4">
-                                        <p className="text-gray-300 text-xs sm:text-sm mb-2">
-                                            Montant à payer ({withdrawalPayment.network})
-                                        </p>
-                                        <p className="text-xl sm:text-2xl font-bold text-white">
-                                            {withdrawalPayment.cryptoAmount} {withdrawalPayment.network}
-                                        </p>
-                                    </div>
-
-                                    <div className="bg-white p-3 sm:p-4 rounded-lg sm:rounded-xl mb-4 flex justify-center">
-                                        <img
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${withdrawalPayment.address}`}
-                                            alt="QR Code"
-                                            className="w-32 h-32 sm:w-48 sm:h-48"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div>
-                                            <p className="text-gray-400 text-xs sm:text-sm mb-1">Adresse de paiement:</p>
-                                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 bg-slate-800/50 p-3 rounded-lg">
-                                                <code className="text-lime-400 font-mono text-xs sm:text-sm flex-1 break-all">
-                                                    {withdrawalPayment.address}
-                                                </code>
-                                                <button
-                                                    onClick={() => copyToClipboard(withdrawalPayment.address, "Adresse")}
-                                                    className="text-gray-400 hover:text-lime-400 transition-colors p-2 hover:bg-lime-400/10 rounded-lg flex-shrink-0 self-end sm:self-auto"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2v8a2 2 0 002 2z"
-                                                        />
-                                                    </svg>
-                                                </button>
-                                            </div>
+                                <div className="bg-slate-700/30 rounded-xl p-4">
+                                    <h5 className="text-white font-semibold mb-3">Détails du retrait:</h5>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Montant demandé:</span>
+                                            <span className="text-white">€{withdrawalData.amount}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Réseau:</span>
+                                            <span className="text-white">{withdrawalData.network}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Adresse de destination:</span>
+                                            <span className="text-white font-mono text-xs">
+                                                {withdrawalData.walletAddress.slice(0, 10)}...
+                                                {withdrawalData.walletAddress.slice(-6)}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-                                    <p className="text-green-400 text-sm">
-                                        ✓ Une fois le paiement confirmé, votre retrait sera traité dans les 24-48 heures.
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                                    <p className="text-red-400 text-sm">
+                                        Si vous avez besoin d’aide, contactez notre{" "}
+                                        <a
+                                            href="https://t.me/Louis_botcrypto"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="underline hover:text-red-300 transition"
+                                        >
+                                            support Telegram
+                                        </a>.
                                     </p>
                                 </div>
+
+                                <button
+                                    onClick={closeWithdrawModal}
+                                    className="w-full px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-slate-600/20 to-slate-700/20 text-slate-300 rounded-lg sm:rounded-xl hover:from-slate-600/30 hover:to-slate-700/30 transition-all duration-300 font-medium border border-slate-600/30 hover:border-slate-500/50 text-sm sm:text-base"
+                                >
+                                    Fermer
+                                </button>
                             </div>
                         )}
                     </div>

@@ -9,6 +9,9 @@ import StatsCard from "./stats-card"
 import ChartCard from "./chart-card"
 import UserManagement from "./user-management"
 import PerformanceMonitor from "./performance-monitor"
+import InvestedUsers from "./InvestedUsers"
+import NonInvestedUsers from "./NonInvestedUsers"
+import Transactions from "./Transactions"
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState("overview")
@@ -16,7 +19,7 @@ const AdminDashboard = () => {
     const [investmentStats, setInvestmentStats] = useState(null)
     const [userStats, setUserStats] = useState(null)
     const [performanceStats, setPerformanceStats] = useState(null)
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(false)
     const [user] = useAuthState(auth)
     const navigate = useNavigate()
 
@@ -120,7 +123,7 @@ const AdminDashboard = () => {
         fetchDashboardData()
 
         // Set up auto-refresh every 30 seconds
-        const interval = setInterval(fetchDashboardData, 30000)
+        const interval = setInterval(fetchDashboardData, 300000)
 
         return () => clearInterval(interval)
     }, [])
@@ -327,6 +330,63 @@ const AdminDashboard = () => {
                                     Analytics
                                 </button>
                             </li>
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab("investedUsers")}
+                                    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors ${activeTab === "investedUsers"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-300 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                >
+                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 19v-6a2 2 0 002-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                        />
+                                    </svg>
+                                    Invested Users
+                                </button>
+                            </li>
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab("NonInvestedUsers")}
+                                    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors ${activeTab === "NonInvestedUsers"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-300 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                >
+                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 19v-6a2 2 0 002-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                        />
+                                    </svg>
+                                    Non Invested Users
+                                </button>
+                            </li>
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab("Transactions")}
+                                    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors ${activeTab === "Transactions"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-300 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                >
+                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 19v-6a2 2 0 002-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                        />
+                                    </svg>
+                                    Transactions
+                                </button>
+                            </li>
                         </ul>
                     </nav>
 
@@ -407,6 +467,10 @@ const AdminDashboard = () => {
                     {activeTab === "overview" && renderOverview()}
                     {activeTab === "users" && <UserManagement />}
                     {activeTab === "performance" && <PerformanceMonitor performanceStats={performanceStats} />}
+                    {activeTab === "investedUsers" && <InvestedUsers />}
+                    {activeTab === "NonInvestedUsers" && <NonInvestedUsers />}
+                    {activeTab === "Transactions" && <Transactions />}
+
                 </div>
             </div>
         </div>

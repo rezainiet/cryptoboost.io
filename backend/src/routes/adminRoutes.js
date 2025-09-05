@@ -12,6 +12,11 @@ const {
     getInvestmentStatsByTimeframe,
     exportUsers,
     exportInvestments,
+    getUsersWithDeposits,
+    getDepositStats,
+    getInvestedUsers,
+    getNonInvestedUsers,
+    getAllTransactions,
 } = require("../Controllers/adminController")
 const { getUserCollection } = require("../config/db")
 
@@ -65,8 +70,15 @@ router.post("/investments/by-currency", checkAdminRole, getInvestmentStats) // A
 // User management routes
 router.post("/users/stats", checkAdminRole, getUserStats)
 router.post("/users", checkAdminRole, getAllUsers)
+router.post("/users/with-deposits", checkAdminRole, getUsersWithDeposits)
+router.post("/users/deposit-stats", checkAdminRole, getDepositStats)
+router.get("/users/invested", getInvestedUsers)
+router.get("/users/non-invested", getNonInvestedUsers)
 router.patch("/users/:id", checkAdminRole, updateUser)
 router.delete("/users/:id", checkAdminRole, deleteUser)
+
+// Transactions route
+router.get("/transactions", getAllTransactions)
 
 // Performance validation routes
 router.post("/performance/stats", checkAdminRole, getPerformanceStats)
