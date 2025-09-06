@@ -808,7 +808,7 @@ async function generateAddress(req, res) {
         const index = await nextIndexFor(network)
         console.log("[v0] Got index:", index)
 
-        const { address, path } = deriveAddressByNetwork(network, index)
+        const { address, path } = await deriveAddressByNetwork(network, index)
         console.log("[v0] Generated address:", address, "path:", path)
 
         // Update the order with the generated address

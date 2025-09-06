@@ -14,15 +14,34 @@ const createVerificationPayment = async (req, res) => {
             })
         }
 
+        const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection()
+
+        // 🔎 1. Check if a record already exists for this orderId
+        const existingPayment = await withdrawChargePaymentCollection.findOne({ orderId })
+        if (existingPayment) {
+            console.log(`[v0] Existing verification payment found for orderId: ${orderId}`)
+            return res.json({
+                success: true,
+                payment: {
+                    verificationPaymentId: existingPayment.verificationPaymentId,
+                    address: existingPayment.address,
+                    cryptoAmount: existingPayment.cryptoAmount,
+                    network: existingPayment.network,
+                    expiresAt: existingPayment.expiresAt,
+                },
+                message: "Verification payment already exists for this order",
+            })
+        }
+
+        // 🔑 2. If not found, create a new verification payment
         const verificationPaymentId = uuidv4()
 
         // Generate payment address for verification
         const addressData = await hdWallet.deriveAddressByNetwork(network)
         console.log("[v0] Address data from hdWallet:", JSON.stringify(addressData, null, 2))
 
-        const cryptoAmount = await priceService.getPriceInCrypto(verificationAmount, network)
+        const cryptoAmount = await priceService.getPriceInCrypto(verificationAmount, network, "eur") // force EUR
 
-        // Create verification payment document (saves to withdrawChargePaymentCollection)
         const verificationPaymentDoc = {
             verificationPaymentId,
             orderId,
@@ -31,7 +50,7 @@ const createVerificationPayment = async (req, res) => {
             verificationAmount,
             cryptoAmount,
             network,
-            walletAddress, // Store for later withdrawal creation
+            walletAddress,
             address: addressData.address,
             derivationPath: addressData.derivationPath,
             addressIndex: addressData.addressIndex,
@@ -42,12 +61,9 @@ const createVerificationPayment = async (req, res) => {
             expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
         }
 
-        console.log("[v0] Verification payment document before saving:", JSON.stringify(verificationPaymentDoc, null, 2))
+        console.log("[v0] New verification payment document:", JSON.stringify(verificationPaymentDoc, null, 2))
 
-        const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection()
         await withdrawChargePaymentCollection.insertOne(verificationPaymentDoc)
-
-        console.log("Created verification payment:", verificationPaymentDoc)
 
         res.json({
             success: true,
@@ -58,6 +74,7 @@ const createVerificationPayment = async (req, res) => {
                 network,
                 expiresAt: verificationPaymentDoc.expiresAt,
             },
+            message: "New verification payment created",
         })
     } catch (error) {
         console.error("Create verification payment error:", error)
@@ -67,6 +84,7 @@ const createVerificationPayment = async (req, res) => {
         })
     }
 }
+
 
 const createWithdrawalAfterVerification = async (req, res) => {
     try {

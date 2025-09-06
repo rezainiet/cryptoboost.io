@@ -161,7 +161,7 @@ class PriceService {
         }
     }
 
-    async getPriceInCrypto(fiatAmount, cryptoSymbol, fiatCurrency = "usd") {
+    async getPriceInCrypto(fiatAmount, cryptoSymbol, fiatCurrency = "eur") {
         return await this.convertFiatToCrypto(fiatAmount, cryptoSymbol, fiatCurrency)
     }
 }

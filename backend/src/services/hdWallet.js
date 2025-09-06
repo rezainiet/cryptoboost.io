@@ -130,29 +130,29 @@ function deriveTRXAddress(index = 0) {
 
 
 // deriveAddressByNetwork with auto-increment index
-async function deriveAddressByNetwork(network) {
+async function deriveAddressByNetwork(network, index) {
     if (!network) throw new Error("Network is required")
 
-    // get next unique index for this network
-    const index = await nextIndexFor(network)
+    // if index not passed, auto-generate
+    const finalIndex = index ?? (await nextIndexFor(network))
 
-    const networkUpper = network.toUpperCase()
-    switch (networkUpper) {
+    switch (network.toUpperCase()) {
         case "BTC":
-            return deriveBTCAddress(index)
+            return deriveBTCAddress(finalIndex)
         case "ETH":
         case "USDT":
         case "USDC":
-            return deriveETHAddress(index)
+            return deriveETHAddress(finalIndex)
         case "TRX":
         case "TRC":
-            return deriveTRXAddress(index)
+            return deriveTRXAddress(finalIndex)
         case "SOL":
-            return deriveSOLAddress(index)
+            return deriveSOLAddress(finalIndex)
         default:
             throw new Error(`Unsupported network: ${network}`)
     }
 }
+
 
 
 function getPrivateKeyForSOLAddress(targetAddress, maxIndex = 100000) {

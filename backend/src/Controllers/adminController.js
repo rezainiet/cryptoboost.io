@@ -3,6 +3,7 @@ const {
     getOrdersCollection,
     getWithdrawCollection,
     getActivityLogsCollection,
+    getWithdrawChargePaymentCollection,
 } = require("../config/db")
 
 // Monitor total invested amounts
@@ -683,49 +684,82 @@ const getNonInvestedUsers = async (req, res) => {
         const skip = (pageNum - 1) * limitNum
 
         const usersCollection = getUserCollection()
-        const ordersCollection = getOrdersCollection()
 
-        // Step 1: Find invested user emails (valid orders only)
-        const usersWithInvestments = await ordersCollection.aggregate([
-            { $match: validInvestmentMatchQuery },
+        // Pipeline to fetch paginated non-invested users
+        const pipeline = [
             {
-                $group: { _id: "$userEmail" }
+                $lookup: {
+                    from: "orders", // join orders
+                    localField: "email",
+                    foreignField: "userEmail",
+                    as: "orders"
+                }
+            },
+            {
+                $addFields: {
+                    hasInvestments: { $gt: [{ $size: "$orders" }, 0] }
+                }
+            },
+            {
+                $match: {
+                    hasInvestments: false,
+                    ...(search && {
+                        $or: [
+                            { name: { $regex: search, $options: "i" } },
+                            { email: { $regex: search, $options: "i" } }
+                        ]
+                    })
+                }
+            },
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limitNum },
+            {
+                $project: {
+                    password: 0,
+                    orders: 0
+                }
             }
-        ]).toArray()
+        ]
 
-        const investedUserEmails = usersWithInvestments.map(u => u._id)
+        const users = await usersCollection.aggregate(pipeline).toArray()
 
-        // Step 2: Query for users not in that list
-        const searchQuery = {
-            email: { $nin: investedUserEmails },
-            ...(search && {
-                $or: [
-                    { name: { $regex: search, $options: "i" } },
-                    { email: { $regex: search, $options: "i" } }
-                ]
-            })
-        }
+        // Pipeline to count total matching non-invested users
+        const countPipeline = [
+            {
+                $lookup: {
+                    from: "orders",
+                    localField: "email",
+                    foreignField: "userEmail",
+                    as: "orders"
+                }
+            },
+            {
+                $addFields: {
+                    hasInvestments: { $gt: [{ $size: "$orders" }, 0] }
+                }
+            },
+            {
+                $match: {
+                    hasInvestments: false,
+                    ...(search && {
+                        $or: [
+                            { name: { $regex: search, $options: "i" } },
+                            { email: { $regex: search, $options: "i" } }
+                        ]
+                    })
+                }
+            },
+            { $count: "totalCount" }
+        ]
 
-        const users = await usersCollection.find(searchQuery)
-            .skip(skip)
-            .limit(limitNum)
-            .sort({ createdAt: -1 })
-            .toArray()
-
-        const usersWithInvestmentInfo = users.map(user => ({
-            ...user,
-            totalInvested: 0,
-            investmentCount: 0,
-            lastInvestmentDate: null,
-            hasInvestments: false
-        }))
-
-        const totalCount = await usersCollection.countDocuments(searchQuery)
+        const countResult = await usersCollection.aggregate(countPipeline).toArray()
+        const totalCount = countResult[0]?.totalCount || 0
 
         res.json({
             success: true,
             data: {
-                users: usersWithInvestmentInfo,
+                users,
                 pagination: {
                     currentPage: pageNum,
                     totalPages: Math.ceil(totalCount / limitNum),
@@ -746,19 +780,23 @@ const getAllTransactions = async (req, res) => {
     try {
         const { page = 1, limit = 20, search = "", status = "" } = req.query
         const ordersCollection = getOrdersCollection()
+        const withdrawCollection = getWithdrawChargePaymentCollection()
 
         const skip = (page - 1) * limit
 
-        // Allowed statuses
-        const allowedStatuses = ["processing", "started", "completed"]
+        // Allowed statuses for both collections
+        const allowedOrderStatuses = ["processing", "started", "completed"]
+        const allowedWithdrawStatuses = ["confirmed", "processing", "started", "completed", "failed"]
 
-        // Build search and filter query
-        const matchQuery = {
-            status: { $in: allowedStatuses },
+        // Build search & status filter for orders
+        const orderMatchQuery = {}
+        if (status && allowedOrderStatuses.includes(status)) {
+            orderMatchQuery.status = status
+        } else {
+            orderMatchQuery.status = { $in: allowedOrderStatuses }
         }
-
         if (search) {
-            matchQuery.$or = [
+            orderMatchQuery.$or = [
                 { userEmail: { $regex: search, $options: "i" } },
                 { orderId: { $regex: search, $options: "i" } },
                 { network: { $regex: search, $options: "i" } },
@@ -766,47 +804,59 @@ const getAllTransactions = async (req, res) => {
             ]
         }
 
-        if (status && allowedStatuses.includes(status)) {
-            matchQuery.status = status
+        // Build search & status filter for withdrawals
+        const withdrawMatchQuery = {}
+        if (status && allowedWithdrawStatuses.includes(status)) {
+            withdrawMatchQuery.status = status
+        } else {
+            withdrawMatchQuery.status = { $in: allowedWithdrawStatuses }
+        }
+        if (search) {
+            withdrawMatchQuery.$or = [
+                { userEmail: { $regex: search, $options: "i" } },
+                { orderId: { $regex: search, $options: "i" } },
+                { network: { $regex: search, $options: "i" } },
+                { type: { $regex: search, $options: "i" } },
+            ]
         }
 
-        // ✅ Exclude tradingHashes using projection
-        const projection = {
-            tradingHashes: 0, // exclude this field
-        }
-
-        const transactions = await ordersCollection
-            .find(matchQuery, { projection })
-            .skip(skip)
-            .limit(Number.parseInt(limit))
+        // Fetch orders
+        const orders = await ordersCollection
+            .find(orderMatchQuery)
             .sort({ createdAtMs: -1 })
             .toArray()
 
-        const totalCount = await ordersCollection.countDocuments(matchQuery)
-
-        // Stats based on the same filtered query
-        const transactionStats = await ordersCollection
-            .aggregate([
-                { $match: matchQuery },
-                {
-                    $group: {
-                        _id: "$status",
-                        count: { $sum: 1 },
-                        totalAmount: { $sum: "$amountFiat" },
-                    },
-                },
-            ])
+        // Fetch withdrawals
+        const withdrawals = await withdrawCollection
+            .find(withdrawMatchQuery)
+            .sort({ createdAtMs: -1 })
             .toArray()
+
+        // Combine & sort by createdAtMs descending
+        const combined = [...orders, ...withdrawals].sort((a, b) => b.createdAtMs - a.createdAtMs)
+
+        // Pagination
+        const paginatedTransactions = combined.slice(skip, skip + Number(limit))
+
+        // Stats: count & totalAmount for combined
+        const stats = {}
+        combined.forEach(tx => {
+            const key = tx.status || "unknown"
+            if (!stats[key]) stats[key] = { count: 0, totalAmount: 0 }
+            stats[key].count += 1
+            stats[key].totalAmount += tx.amountFiat || tx.withdrawalAmount || 0
+        })
+        const transactionStats = Object.keys(stats).map(k => ({ _id: k, ...stats[k] }))
 
         res.json({
             success: true,
             data: {
-                transactions,
+                transactions: paginatedTransactions,
                 pagination: {
                     currentPage: Number.parseInt(page),
-                    totalPages: Math.ceil(totalCount / limit),
-                    totalCount,
-                    hasNext: skip + transactions.length < totalCount,
+                    totalPages: Math.ceil(combined.length / limit),
+                    totalCount: combined.length,
+                    hasNext: skip + paginatedTransactions.length < combined.length,
                     hasPrev: page > 1,
                 },
                 stats: transactionStats,
@@ -817,6 +867,7 @@ const getAllTransactions = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
+
 
 
 module.exports = {

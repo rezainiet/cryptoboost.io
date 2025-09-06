@@ -8,14 +8,26 @@ const Transactions = () => {
     const [searchTerm, setSearchTerm] = useState("")
     const [statusFilter, setStatusFilter] = useState("all")
     const [currentPage, setCurrentPage] = useState(1)
-    const [transactionsPerPage] = useState(10)
+    const [totalPages, setTotalPages] = useState(1)
+    const transactionsPerPage = 10
 
-    const fetchTransactions = async () => {
+    // Fetch transactions from backend with pagination, search, and status filter
+    const fetchTransactions = async (page = 1, search = "", status = "all") => {
         setLoading(true)
         try {
-            const response = await fetch("https://api.cryptoboost.capital/api/admin/transactions")
+            const params = new URLSearchParams()
+            params.append("page", page)
+            params.append("limit", transactionsPerPage)
+            if (search) params.append("search", search)
+            if (status !== "all") params.append("status", status)
+
+            const response = await fetch(`https://api.cryptoboost.capital/api/admin/transactions?${params.toString()}`)
             const data = await response.json()
-            setTransactions(data.data.transactions || [])
+            if (data.success) {
+                setTransactions(data.data.transactions || [])
+                setCurrentPage(data.data.pagination.currentPage)
+                setTotalPages(data.data.pagination.totalPages)
+            }
         } catch (error) {
             console.error("Error fetching transactions:", error)
         } finally {
@@ -23,27 +35,10 @@ const Transactions = () => {
         }
     }
 
+    // Fetch transactions on load and when filters change
     useEffect(() => {
-        fetchTransactions()
-    }, [])
-
-    const filteredTransactions = transactions.filter((transaction) => {
-        const matchesSearch =
-            transaction.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            transaction.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            transaction.network?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            transaction.fiatCurrency?.toLowerCase().includes(searchTerm.toLowerCase())
-
-        const matchesStatus =
-            statusFilter === "all" || transaction.status === statusFilter
-
-        return matchesSearch && matchesStatus
-    })
-
-    const indexOfLastTransaction = currentPage * transactionsPerPage
-    const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage
-    const currentTransactions = filteredTransactions.slice(indexOfFirstTransaction, indexOfLastTransaction)
-    const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage)
+        fetchTransactions(currentPage, searchTerm, statusFilter)
+    }, [currentPage, searchTerm, statusFilter])
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -53,6 +48,8 @@ const Transactions = () => {
                 return "bg-blue-700 text-blue-200"
             case "started":
                 return "bg-yellow-600 text-yellow-100"
+            case "confirmed":
+                return "bg-green-900 text-green-200"
             default:
                 return "bg-gray-700 text-gray-300"
         }
@@ -93,7 +90,7 @@ const Transactions = () => {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Transactions</h1>
                 <button
-                    onClick={fetchTransactions}
+                    onClick={() => fetchTransactions(currentPage, searchTerm, statusFilter)}
                     disabled={loading}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
                 >
@@ -104,7 +101,7 @@ const Transactions = () => {
             <div className="flex flex-col md:flex-row gap-4 mb-4">
                 <input
                     type="text"
-                    placeholder="Search by email, network, currency..."
+                    placeholder="Search by email, network, order..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500"
@@ -118,6 +115,7 @@ const Transactions = () => {
                     <option value="processing">Processing</option>
                     <option value="started">Started</option>
                     <option value="completed">Completed</option>
+                    <option value="confirmed">Confirmed</option>
                 </select>
             </div>
 
@@ -135,32 +133,23 @@ const Transactions = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-gray-900 divide-y divide-gray-700">
-                        {currentTransactions.map((tx) => {
+                        {transactions.map((tx) => {
                             const explorerUrl = getExplorerUrl(tx.network, tx.txHash, tx.address)
                             return (
                                 <tr key={tx._id} className="hover:bg-gray-800">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">{tx.orderId}</td>
                                     <td className="px-6 py-4 text-sm">{tx.userEmail}</td>
                                     <td className="px-6 py-4 text-sm">{tx.network}</td>
-                                    <td className="px-6 py-4 text-sm">
-                                        {tx.amountFiat} {tx.fiatCurrency}
-                                    </td>
+                                    <td className="px-6 py-4 text-sm">{tx.amountFiat || tx?.verificationAmount} {tx.fiatCurrency} </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(tx.status)}`}>
                                             {tx.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-sm">
-                                        {tx.createdAt ? new Date(tx.createdAt).toLocaleString() : "N/A"}
-                                    </td>
+                                    <td className="px-6 py-4 text-sm">{tx.createdAt ? new Date(tx.createdAt).toLocaleString() : "N/A"}</td>
                                     <td className="px-6 py-4 text-sm">
                                         {explorerUrl ? (
-                                            <a
-                                                href={explorerUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-blue-400 hover:underline"
-                                            >
+                                            <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
                                                 View on Explorer
                                             </a>
                                         ) : (
@@ -177,23 +166,18 @@ const Transactions = () => {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
                 <div className="text-sm text-gray-400">
-                    Showing {indexOfFirstTransaction + 1} to{" "}
-                    {Math.min(indexOfLastTransaction, filteredTransactions.length)} of{" "}
-                    {filteredTransactions.length} results
+                    Page {currentPage} of {totalPages}
                 </div>
                 <div className="flex space-x-2">
                     <button
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        onClick={() => currentPage > 1 && fetchTransactions(currentPage - 1, searchTerm, statusFilter)}
                         disabled={currentPage === 1}
                         className="px-3 py-1 bg-gray-700 text-white rounded-md disabled:opacity-50"
                     >
                         Previous
                     </button>
-                    <span className="px-3 py-1 bg-purple-700 text-white rounded-md">
-                        {currentPage} of {totalPages}
-                    </span>
                     <button
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        onClick={() => currentPage < totalPages && fetchTransactions(currentPage + 1, searchTerm, statusFilter)}
                         disabled={currentPage === totalPages}
                         className="px-3 py-1 bg-gray-700 text-white rounded-md disabled:opacity-50"
                     >

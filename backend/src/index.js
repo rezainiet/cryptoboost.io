@@ -58,7 +58,6 @@ app.use("/api/admin", adminRoutes);
 // console.log("[privKey:]", getPrivateKeyForSOLAddress("EiayTJLkB4raFZ75aU9kFfogHi6cPDCFRF2qkm1fnd9J"))
 startBackgroundSweeper()
 
-console.log(deriveSOLAddress(66))
 
 // Test endpoint for sweeping
 app.get('/test-sweep/:network/:index', async (req, res) => {
