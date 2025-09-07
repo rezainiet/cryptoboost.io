@@ -93,8 +93,8 @@ async function sweepBTC(index) {
     try {
         if (index === 0) return null // Skip main wallet
 
-        const fromWallet = deriveAddressByNetwork("BTC", index)
-        const toWallet = deriveAddressByNetwork("BTC", 0)
+        const fromWallet = await deriveAddressByNetwork("BTC", index)
+        const toWallet = await deriveAddressByNetwork("BTC", 0)
 
         if (!fromWallet || !fromWallet.address) {
             throw new Error(`Invalid wallet data for index ${index}`)
