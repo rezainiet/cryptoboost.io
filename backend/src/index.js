@@ -15,7 +15,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
 const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
-const { deriveBTCAddress, deriveETHAddress, deriveTRXAddress, deriveSOLAddress } = require("./services/hdWallet");
+const { deriveBTCAddress, deriveETHAddress, deriveTRXAddress, deriveSOLAddress, deriveAddressByNetwork } = require("./services/hdWallet");
 
 // Load environment variables
 dotenv.config();
@@ -52,6 +52,8 @@ app.use("/withdrawals", withdrawalRoutes);
 app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
 
+
+console.log(deriveAddressByNetwork("USDC", 27))
 
 // console.log("[address 35:]", deriveTRXAddress(0))
 // console.log("[address 35:]", deriveETHAddress(16))

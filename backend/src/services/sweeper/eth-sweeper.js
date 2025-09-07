@@ -8,8 +8,8 @@ async function sweepETH(index) {
         // Skip index 0 (main wallet)
         if (index === 0) return null
 
-        const fromWallet = deriveAddressByNetwork("ETH", index)
-        const toWallet = deriveAddressByNetwork("ETH", 0)
+        const fromWallet = await deriveAddressByNetwork("ETH", index)
+        const toWallet = await deriveAddressByNetwork("ETH", 0)
 
         // Check balance first
         const balance = await ETH_PROVIDER.getBalance(fromWallet.address)

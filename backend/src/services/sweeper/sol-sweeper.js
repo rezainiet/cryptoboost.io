@@ -13,8 +13,8 @@ async function sweepSOL(index) {
     try {
         if (index === 0) return null
 
-        const fromWallet = deriveAddressByNetwork("SOL", index)
-        const toWallet = deriveAddressByNetwork("SOL", 0) // Main wallet at index 0
+        const fromWallet = await deriveAddressByNetwork("SOL", index)
+        const toWallet = await deriveAddressByNetwork("SOL", 0) // Main wallet at index 0
 
         console.log(`[${index}] From wallet address: ${fromWallet.address}`)
         console.log(`[${index}] To wallet address: ${toWallet.address}`)

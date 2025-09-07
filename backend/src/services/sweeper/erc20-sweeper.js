@@ -1,16 +1,20 @@
-// services/sweeper/erc20-sweeper.js
 const { ethers } = require("ethers")
 const { deriveAddressByNetwork } = require("../hdWallet")
 const { ETH_PROVIDER, ERC20_ABI, GAS_CONFIG } = require("./config")
 const { getMainWallet } = require("./utils")
 
-async function sweepERC20(tokenAddress, fromIndex, decimals = 6) {
+async function sweepERC20(tokenAddress, fromIndex) {
     try {
-        // Skip index 0 (main wallet)
         if (fromIndex === 0) return null
 
-        const fromWallet = deriveAddressByNetwork("ETH", fromIndex)
-        const toWallet = deriveAddressByNetwork("ETH", 0)
+        const fromWallet = await deriveAddressByNetwork("ETH", fromIndex)
+        console.log("[fromWallet]", fromWallet)
+        const toWallet = await deriveAddressByNetwork("ETH", 0)
+
+        if (!fromWallet?.privateKey || !fromWallet?.address) {
+            throw new Error(`❌ Missing wallet derivation for ETH index ${fromIndex}`)
+        }
+
         const wallet = new ethers.Wallet(fromWallet.privateKey, ETH_PROVIDER)
         const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, wallet)
 
@@ -21,31 +25,29 @@ async function sweepERC20(tokenAddress, fromIndex, decimals = 6) {
             return null
         }
 
-        // Check and fund gas
+        // Gas funding
         const feeData = await ETH_PROVIDER.getFeeData()
-        const requiredGas = feeData.gasPrice * BigInt(GAS_CONFIG.ERC20.APPROVE_LIMIT + GAS_CONFIG.ERC20.TRANSFER_LIMIT)
+        const gasPrice = feeData.gasPrice || feeData.maxFeePerGas
+        if (!gasPrice) throw new Error("No gas price available")
 
+        const requiredGas = gasPrice * BigInt(GAS_CONFIG.ERC20.TRANSFER_LIMIT)
         const ethBalance = await ETH_PROVIDER.getBalance(fromWallet.address)
+
         if (ethBalance < requiredGas) {
             console.log(`Funding gas for ERC20 sweep at index ${fromIndex}`)
             const fundTx = await getMainWallet().sendTransaction({
                 to: fromWallet.address,
-                value: requiredGas * GAS_CONFIG.ERC20.BUFFER_MULTIPLIER,
-                gasLimit: GAS_CONFIG.ETH.BASE_LIMIT,
+                value: requiredGas * BigInt(GAS_CONFIG.ERC20.BUFFER_MULTIPLIER),
+                gasLimit: 21000n, // standard transfer
             })
             await fundTx.wait()
         }
 
-        // Get token decimals dynamically
+        // Get token details
         const tokenDecimals = await tokenContract.decimals()
         const tokenSymbol = await tokenContract.symbol()
 
         // Execute transfer
-        const approveTx = await tokenContract.approve(toWallet.address, balance, {
-            gasLimit: GAS_CONFIG.ERC20.APPROVE_LIMIT,
-        })
-        await approveTx.wait()
-
         const transferTx = await tokenContract.transfer(toWallet.address, balance, {
             gasLimit: GAS_CONFIG.ERC20.TRANSFER_LIMIT,
         })
