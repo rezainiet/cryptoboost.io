@@ -217,7 +217,7 @@ app.get("/scan-range-eth/:from/:to", async (req, res) => {
 
 // Start services
 startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.96 });
-// startHashGeneratorService();
+startHashGeneratorService();
 
 // Root route
 app.get("/", (req, res) => {
