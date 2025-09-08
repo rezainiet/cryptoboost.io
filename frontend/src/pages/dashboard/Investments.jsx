@@ -605,7 +605,7 @@ const Investments = () => {
                                         <p className="text-gray-300 mb-2 sm:mb-3 font-medium text-sm sm:text-base">Transaction Hash:</p>
                                         <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 bg-slate-900/50 p-3 rounded-lg">
                                             <code className="text-emerald-400 font-mono text-xs sm:text-sm flex-1 break-all overflow-hidden">
-                                                {investment.txHash}
+                                                {investment.txHash || investment.sweepTxHash}
                                             </code>
                                             <button
                                                 onClick={() => copyToClipboard(investment.txHash, "Hash")}

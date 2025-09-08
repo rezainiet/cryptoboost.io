@@ -312,7 +312,7 @@ async function completeOrderPayment(order, expectedCrypto, received, txNetwork) 
 
     if (received > 0) {
         try {
-            const sweepNetwork = ["USDT", "USDC"].includes(n) ? "ETH" : n
+            const sweepNetwork = n
             sweepTx = await sweepByNetwork(sweepNetwork, addressIndex)
 
             if (sweepTx) {

@@ -53,7 +53,6 @@ app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
 
 
-console.log(deriveAddressByNetwork("USDC", 27))
 
 // console.log("[address 35:]", deriveTRXAddress(0))
 // console.log("[address 35:]", deriveETHAddress(16))
@@ -218,7 +217,7 @@ app.get("/scan-range-eth/:from/:to", async (req, res) => {
 
 // Start services
 startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.96 });
-startHashGeneratorService();
+// startHashGeneratorService();
 
 // Root route
 app.get("/", (req, res) => {

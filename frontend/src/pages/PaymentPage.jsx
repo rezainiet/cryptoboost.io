@@ -5,7 +5,7 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { useLocation, useNavigate } from "react-router-dom"
 import { auth } from "../../firebase"
 
-const API_BASE = import.meta.env.VITE_API_BASE || "https://api.cryptoboost.capital"
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:9000"
 
 const paymentOptions = [
     {
@@ -28,7 +28,7 @@ const paymentOptions = [
     },
     {
         id: "USDT",
-        name: "Tether (ERC20)",
+        name: "USDT (ERC20)",
         symbol: "₮",
         color: "from-green-400 to-teal-500",
         glowColor: "green-400",
@@ -37,7 +37,7 @@ const paymentOptions = [
     },
     {
         id: "USDC",
-        name: "USD Coin (ERC20)",
+        name: "USDC (ERC20)",
         symbol: "$",
         color: "from-blue-400 to-sky-500",
         glowColor: "blue-400",
