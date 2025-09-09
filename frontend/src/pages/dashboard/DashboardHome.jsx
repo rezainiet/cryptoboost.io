@@ -224,7 +224,7 @@ const DashboardHome = () => {
 
     const handlePackageSelect = (pkg) => {
         setShowPackageModal(false)
-        navigate("/payment", { state: { package: pkg, network: "BTC" } })
+        navigate("/payment", { state: { package: pkg, network: "SOL" } })
     }
 
     const openPackageSelection = () => {
@@ -422,12 +422,12 @@ const DashboardHome = () => {
                                                     <p className="text-white font-bold text-base sm:text-lg lg:text-xl">{activity.amount}</p>
                                                     <p
                                                         className={`text-xs sm:text-sm font-medium ${activity.displayStatus === "Confirmé" || activity.displayStatus === "Reçu"
-                                                                ? "text-emerald-400"
-                                                                : activity.displayStatus === "En attente"
-                                                                    ? "text-yellow-400"
-                                                                    : activity.displayStatus === "Actif"
-                                                                        ? "text-lime-400"
-                                                                        : "text-blue-400"
+                                                            ? "text-emerald-400"
+                                                            : activity.displayStatus === "En attente"
+                                                                ? "text-yellow-400"
+                                                                : activity.displayStatus === "Actif"
+                                                                    ? "text-lime-400"
+                                                                    : "text-blue-400"
                                                             }`}
                                                     >
                                                         {activity.displayStatus}
@@ -621,8 +621,8 @@ const DashboardHome = () => {
                                                                         <div
                                                                             key={tx.id}
                                                                             className={`flex items-center justify-between p-2 bg-slate-900/50 rounded border border-slate-600/20 transition-all duration-500 ${tx.fadeOut
-                                                                                    ? "opacity-0 transform translate-x-full"
-                                                                                    : "opacity-100 transform translate-x-0"
+                                                                                ? "opacity-0 transform translate-x-full"
+                                                                                : "opacity-100 transform translate-x-0"
                                                                                 }`}
                                                                         >
                                                                             <div className="flex items-center space-x-2 min-w-0 flex-1">

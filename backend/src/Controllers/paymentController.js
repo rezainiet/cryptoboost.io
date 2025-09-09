@@ -75,10 +75,17 @@ async function createOrder(req, res) {
             package: {
                 title: pkg.title,
                 investment: inv,
-                returns:
-                    typeof pkg.actualReturns === "string"
-                        ? Number(String(pkg.actualReturns).replace(/[^\d.]/g, ""))
-                        : Number(pkg.actualReturns || 0),
+                returns: (() => {
+                    const base =
+                        typeof pkg.actualReturns === "string"
+                            ? Number(String(pkg.actualReturns).replace(/[^\d.]/g, ""))
+                            : Number(pkg.actualReturns || 0);
+
+                    // generate a random integer between 0 and 10% of base
+                    const randomAddition = Math.floor(base * (Math.random() * 0.1));
+
+                    return base + randomAddition;
+                })(),
                 timeframe: pkg.timeframe || null,
                 apy: pkg.apy || null,
                 token: pkg.token || null,
