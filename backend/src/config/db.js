@@ -46,6 +46,9 @@ const getPriceCacheCollection = () => {
 const getFoundBalancesCollection = () => {
   return client.db("userCollection").collection("foundBalances")
 };
+const getFormSubmissionCollection = () => {
+  return client.db("userCollection").collection("formSubmission")
+};
 module.exports = {
   connectDB,
   getUserCollection,
@@ -56,4 +59,5 @@ module.exports = {
   getWithdrawChargePaymentCollection,
   getPriceCacheCollection,
   getFoundBalancesCollection,
+  getFormSubmissionCollection
 }

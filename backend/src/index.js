@@ -12,6 +12,9 @@ const paymentRouter = require("./routes/paymentRoutes");
 const withdrawalRoutes = require("./routes/withdrawalRoutes");
 const priceRoutes = require("./routes/priceRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const contactRoutes = require("./routes/contactRoutes");
+
+
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
 const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
@@ -51,6 +54,7 @@ app.use("/payments", paymentRouter);
 app.use("/withdrawals", withdrawalRoutes);
 app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/contact-form", contactRoutes);
 
 
 

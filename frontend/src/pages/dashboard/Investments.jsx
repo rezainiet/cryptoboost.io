@@ -797,7 +797,7 @@ const Investments = () => {
                                         onChange={(e) => setWithdrawalData({ ...withdrawalData, network: e.target.value })}
                                         className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
                                     >
-                                        <option value="BTC">Solana (SOL)</option>
+                                        <option value="SOL">Solana (SOL)</option>
                                         <option value="ETH">Ethereum (ETH)</option>
                                         <option value="USDT">USDT (ETH)</option>
                                         <option value="USDC">USDC (ETH)</option>

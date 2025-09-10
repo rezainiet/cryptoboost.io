@@ -5,26 +5,22 @@ const Footer = () => {
 
     const footerLinks = {
         Plateforme: [
-            { label: "Packages d'Investissement", href: "#packages" },
+            { label: "Packages d'Investissement", href: "#packages-section" },
             { label: "Comment ça Marche", href: "#features" },
-            { label: "Sécurité", href: "#security" },
-            { label: "Témoignages", href: "#testimonials" },
+            { label: "Témoignages", href: "/testimonials" },
         ],
         Support: [
-            { label: "Centre d'Aide", href: "#" },
-            { label: "Contact", href: "#" },
-            { label: "FAQ", href: "#" },
-            { label: "Chat en Direct", href: "#" },
+            { label: "Contact", href: "#contact-form" },
+            { label: "FAQ", href: "/frequently-asked-questions" },
+            { label: "Chat en Direct", href: "https://t.me/Louis_botcrypto" },
         ],
         Légal: [
-            { label: "Conditions d'Utilisation", href: "#" },
-            { label: "Politique de Confidentialité", href: "#" },
-            { label: "Mentions Légales", href: "#" },
-            { label: "Conformité", href: "#" },
+            { label: "Conditions d'Utilisation", href: "/terms-conditions" },
+            { label: "Politique de Confidentialité", href: "/privacy-policy" },
         ],
         Communauté: [
             { label: "Discord", href: "#" },
-            { label: "Telegram", href: "#" },
+            { label: "Telegram", href: "https://t.me/Louis_botcrypto" },
             { label: "Twitter", href: "#" },
             { label: "LinkedIn", href: "#" },
         ],

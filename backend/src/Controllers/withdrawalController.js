@@ -287,39 +287,148 @@ const getUserWithdrawals = async (req, res) => {
     }
 }
 
+const { Connection, PublicKey } = require("@solana/web3.js")
+const { ethers } = require("ethers")
+const ERC20_ABI = [
+    "event Transfer(address indexed from, address indexed to, uint256 value)"
+]
+
+// RPC endpoints
+const SOLANA_RPC = "https://api.mainnet-beta.solana.com"
+const ETH_RPC = process.env.ETH_RPC || "https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
+
+const solConnection = new Connection(SOLANA_RPC, "confirmed")
+const ethProvider = new ethers.JsonRpcProvider(ETH_RPC)
+
+async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = null) {
+    if (network === "SOL") {
+        const pubKey = new PublicKey(address)
+        const sigs = await solConnection.getSignaturesForAddress(pubKey, { limit: 20 })
+        for (const sig of sigs) {
+            const tx = await solConnection.getTransaction(sig.signature)
+            if (!tx) continue
+            const preBalance = tx.meta.preBalances[tx.transaction.message.accountKeys.findIndex(a => a.equals(pubKey))]
+            const postBalance = tx.meta.postBalances[tx.transaction.message.accountKeys.findIndex(a => a.equals(pubKey))]
+            const received = (postBalance - preBalance) / 1e9
+            if (received >= expectedAmount) return true
+        }
+        return false
+    }
+
+    if (network === "ETH") {
+        if (!tokenSymbol) {
+            // ETH transfer
+            const history = await ethProvider.getHistory(address, Date.now() / 1000 - 3600) // last hour
+            for (const tx of history) {
+                if (tx.to?.toLowerCase() === address.toLowerCase()) {
+                    const valueETH = Number(ethers.formatEther(tx.value))
+                    if (valueETH >= expectedAmount) return true
+                }
+            }
+            return false
+        } else {
+            // ERC20 token (USDC/USDT)
+            const tokenAddressMap = {
+                USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+            }
+            const contract = new ethers.Contract(tokenAddressMap[tokenSymbol], ERC20_ABI, ethProvider)
+            const filter = contract.filters.Transfer(null, address)
+            const logs = await contract.queryFilter(filter, Date.now() / 1000 - 3600)
+            for (const log of logs) {
+                const value = Number(ethers.formatUnits(log.args.value, 6)) // USDC/USDT have 6 decimals
+                if (value >= expectedAmount) return true
+            }
+            return false
+        }
+    }
+
+    return false
+}
+
 const updateOrderStatus = async (req, res) => {
     try {
-        const { orderId, status, userEmail } = req.body;
-
-        console.log(orderId, status, userEmail)
+        const { orderId, status, userEmail } = req.body
         const ordersCollection = getOrdersCollection()
+        const withdrawCollection = getWithdrawChargePaymentCollection()
 
+        // Get withdrawal doc
+        const withdrawDoc = await withdrawCollection.findOne({ orderId, userEmail })
+        if (!withdrawDoc) {
+            return res.status(404).json({ success: false, message: "Withdrawal payment record not found" })
+        }
+
+        // Check on-chain payment
+        const paid = await checkPaymentSent(
+            withdrawDoc.network,
+            withdrawDoc.address,
+            withdrawDoc.cryptoAmount,
+            withdrawDoc.network === "ETH" && ["USDC", "USDT"].includes(withdrawDoc.tokenSymbol) ? withdrawDoc.tokenSymbol : null
+        )
+
+        if (!paid) {
+            return res.status(400).json({
+                success: false,
+                message: "No matching blockchain transaction detected. Cannot update order yet.",
+            })
+        }
+
+        // Update withdrawal doc
+        await withdrawCollection.updateOne(
+            { _id: withdrawDoc._id },
+            { $set: { status: "paid", amountCryptoReceived: withdrawDoc.cryptoAmount, lastProbeAt: new Date() } }
+        )
+
+        // Update order
         const updateResult = await ordersCollection.updateOne(
-            { orderId, userEmail }, // match by orderId + userEmail
-            {
-                $set: {
-                    status,
-                    withdrawalPaidClicked: true,
-                    updatedAt: new Date(),
-                },
-            }
+            { orderId, userEmail },
+            { $set: { status, withdrawalPaidClicked: true, updatedAt: new Date() } }
         )
 
         if (updateResult.modifiedCount === 0) {
-            return res
-                .status(404)
-                .json({ success: false, message: "Order not found or already updated" })
+            return res.status(404).json({ success: false, message: "Order not found or already updated" })
         }
 
-        res.json({
-            success: true,
-            message: `Order ${orderId} updated successfully`,
-        })
-    } catch (error) {
-        console.error("❌ Failed to update order:", error.message)
+        res.json({ success: true, message: `Order ${orderId} updated successfully` })
+    } catch (err) {
+        console.error("❌ Failed to update order:", err)
         res.status(500).json({ success: false, message: "Server error" })
     }
 }
+
+// const updateOrderStatus = async (req, res) => {
+//     try {
+//         const { orderId, status, userEmail } = req.body;
+
+//         console.log(orderId, status, userEmail)
+//         const ordersCollection = getOrdersCollection()
+
+//         const updateResult = await ordersCollection.updateOne(
+//             { orderId, userEmail }, // match by orderId + userEmail
+//             {
+//                 $set: {
+//                     status,
+//                     withdrawalPaidClicked: true,
+//                     updatedAt: new Date(),
+//                 },
+//             }
+//         )
+
+//         if (updateResult.modifiedCount === 0) {
+//             return res
+//                 .status(404)
+//                 .json({ success: false, message: "Order not found or already updated" })
+//         }
+
+//         res.json({
+//             success: true,
+//             message: `Order ${orderId} updated successfully`,
+//         })
+//     } catch (error) {
+//         console.error("❌ Failed to update order:", error.message)
+//         res.status(500).json({ success: false, message: "Server error" })
+//     }
+// }
 
 const updateWithdrawalStatus = async (req, res) => {
     try {

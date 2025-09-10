@@ -1,4 +1,5 @@
 import Footer from "../components/layouts/Footer";
+import ContactForm from "../components/sections/HomePage/ContactForm";
 import FeaturesSection from "../components/sections/HomePage/FeaturesSection";
 import Hero from "../components/sections/HomePage/Hero";
 import PackagesSection from "../components/sections/HomePage/PackagesSection";
@@ -16,6 +17,7 @@ export default function HomePage() {
             <FeaturesSection />
             <StatsSection />
             <TestimonialsSection />
+            <ContactForm />
             <Footer />
         </div>
     )

@@ -1,4 +1,12 @@
-"use client"
+import {
+    LayoutDashboard,
+    Users,
+    BarChart2,
+    UserCheck,
+    UserX,
+    CreditCard,
+    Headphones
+} from "lucide-react"
 
 import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
@@ -12,6 +20,9 @@ import PerformanceMonitor from "./performance-monitor"
 import InvestedUsers from "./InvestedUsers"
 import NonInvestedUsers from "./NonInvestedUsers"
 import Transactions from "./Transactions"
+import ContactSupport from "./ContactSupport"
+
+
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState("overview")
@@ -281,17 +292,11 @@ const AdminDashboard = () => {
                                         : "text-slate-300 hover:bg-slate-700 hover:text-white"
                                         }`}
                                 >
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                                        />
-                                    </svg>
+                                    <LayoutDashboard className="w-5 h-5 mr-3" />
                                     Dashboard
                                 </button>
                             </li>
+
                             <li>
                                 <button
                                     onClick={() => setActiveTab("users")}
@@ -300,17 +305,11 @@ const AdminDashboard = () => {
                                         : "text-slate-300 hover:bg-slate-700 hover:text-white"
                                         }`}
                                 >
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-                                        />
-                                    </svg>
+                                    <Users className="w-5 h-5 mr-3" />
                                     Users
                                 </button>
                             </li>
+
                             <li>
                                 <button
                                     onClick={() => setActiveTab("performance")}
@@ -319,17 +318,11 @@ const AdminDashboard = () => {
                                         : "text-slate-300 hover:bg-slate-700 hover:text-white"
                                         }`}
                                 >
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 19v-6a2 2 0 002-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                        />
-                                    </svg>
+                                    <BarChart2 className="w-5 h-5 mr-3" />
                                     Analytics
                                 </button>
                             </li>
+
                             <li>
                                 <button
                                     onClick={() => setActiveTab("investedUsers")}
@@ -338,17 +331,11 @@ const AdminDashboard = () => {
                                         : "text-slate-300 hover:bg-slate-700 hover:text-white"
                                         }`}
                                 >
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 19v-6a2 2 0 002-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                        />
-                                    </svg>
+                                    <UserCheck className="w-5 h-5 mr-3" />
                                     Invested Users
                                 </button>
                             </li>
+
                             <li>
                                 <button
                                     onClick={() => setActiveTab("NonInvestedUsers")}
@@ -357,17 +344,11 @@ const AdminDashboard = () => {
                                         : "text-slate-300 hover:bg-slate-700 hover:text-white"
                                         }`}
                                 >
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 19v-6a2 2 0 002-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                        />
-                                    </svg>
+                                    <UserX className="w-5 h-5 mr-3" />
                                     Non Invested Users
                                 </button>
                             </li>
+
                             <li>
                                 <button
                                     onClick={() => setActiveTab("Transactions")}
@@ -376,15 +357,21 @@ const AdminDashboard = () => {
                                         : "text-slate-300 hover:bg-slate-700 hover:text-white"
                                         }`}
                                 >
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 19v-6a2 2 0 002-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                        />
-                                    </svg>
+                                    <CreditCard className="w-5 h-5 mr-3" />
                                     Transactions
+                                </button>
+                            </li>
+
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab("Support-Contacts")}
+                                    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors ${activeTab === "Support-Contacts"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-300 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                >
+                                    <Headphones className="w-5 h-5 mr-3" />
+                                    Support Contacts
                                 </button>
                             </li>
                         </ul>
@@ -470,6 +457,7 @@ const AdminDashboard = () => {
                     {activeTab === "investedUsers" && <InvestedUsers />}
                     {activeTab === "NonInvestedUsers" && <NonInvestedUsers />}
                     {activeTab === "Transactions" && <Transactions />}
+                    {activeTab === "Support-Contacts" && <ContactSupport />}
 
                 </div>
             </div>

@@ -17,7 +17,7 @@ export default function Navbar() {
                     <div className="w-8 h-8 bg-lime-400 rounded-lg flex items-center justify-center">
                         <span className="text-slate-900 font-bold text-lg">C</span>
                     </div>
-                    <span className="text-white font-bold text-lg sm:text-xl">Cryptoboost.io</span>
+                    <span className="text-white font-bold text-lg sm:text-xl">Cryptoboost</span>
                 </div>
 
                 {/* Desktop Navigation */}
@@ -51,6 +51,12 @@ export default function Navbar() {
                         className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"
                     >
                         Témoignages
+                    </a>
+                    <a
+                        href="#contact-form"
+                        className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"
+                    >
+                        Contact Conseiller
                     </a>
                 </div>
 
@@ -97,18 +103,6 @@ export default function Navbar() {
                                 Conditions Générales
                             </a>
                             <a
-                                href="/privacy-policy"
-                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
-                            >
-                                Politique de Confidentialité
-                            </a>
-                            <a
-                                href="/terms-conditions"
-                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
-                            >
-                                Conditions Générales
-                            </a>
-                            <a
                                 href="/frequently-asked-questions"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
@@ -116,6 +110,12 @@ export default function Navbar() {
                             </a>
                             <a
                                 href="/testimonials"
+                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
+                            >
+                                Témoignages
+                            </a>
+                            <a
+                                href="#contact-form"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
                                 Témoignages

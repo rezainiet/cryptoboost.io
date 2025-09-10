@@ -5,6 +5,7 @@ import Navbar from "../../layouts/Navbar"
 import { useAuthState } from "react-firebase-hooks/auth"
 import CryptoPrices from "./CryptoPrices"
 import { auth } from "../../../../firebase"
+import { Link } from "react-router-dom"
 
 const Hero = () => {
     const [user] = useAuthState(auth)
@@ -49,7 +50,9 @@ const Hero = () => {
 
                         <div className="flex flex-col sm:flex-row gap-4">
                             <button className="bg-lime-400 text-black px-8 py-3 rounded-lg font-semibold hover:bg-lime-300 transition-colors">
-                                {user?.email ? "Tableau de bord" : "Se connecter"}
+                                <Link to={"/dashboard"}>
+                                    {user?.email ? "Tableau de bord" : "Se connecter"}
+                                </Link>
                             </button>
                             <button className="text-gray-300 hover:text-white transition-colors">Lire la Documentation</button>
                         </div>
