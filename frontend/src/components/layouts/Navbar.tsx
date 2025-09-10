@@ -40,6 +40,18 @@ export default function Navbar() {
                     >
                         Conditions Générales
                     </a>
+                    <a
+                        href="/frequently-asked-questions"
+                        className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"
+                    >
+                        FAQ
+                    </a>
+                    <a
+                        href="/testimonials"
+                        className="text-white/80 hover:text-white transition-colors text-sm xl:text-base"
+                    >
+                        Témoignages
+                    </a>
                 </div>
 
 
@@ -84,30 +96,31 @@ export default function Navbar() {
                             >
                                 Conditions Générales
                             </a>
-                            {/* <a
-                                href="#"
+                            <a
+                                href="/privacy-policy"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
-                                Gouvernance
+                                Politique de Confidentialité
                             </a>
                             <a
-                                href="#"
+                                href="/terms-conditions"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
-                                À propos
+                                Conditions Générales
                             </a>
                             <a
-                                href="#"
+                                href="/frequently-asked-questions"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
-                                Communauté
+                                FAQ
                             </a>
                             <a
-                                href="#"
+                                href="/testimonials"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
-                                Produits
-                            </a> */}
+                                Témoignages
+                            </a>
+
                         </div>
 
                         {/* AuthManager for mobile */}
