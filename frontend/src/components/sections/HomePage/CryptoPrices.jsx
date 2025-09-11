@@ -28,7 +28,7 @@ const CryptoPrices = () => {
                 }
 
                 const data = await res.json()
-                console.log("[v0] Fetched crypto data:", data)
+                // console.log("[v0] Fetched crypto data:", data)
 
                 setPrices((prevPrices) => ({ ...data }))
                 setLastUpdated(new Date())

@@ -90,6 +90,14 @@ export default function Navbar() {
                     <div className="px-4 sm:px-6 py-4 space-y-4 max-h-[80vh] overflow-y-auto">
                         {/* Navigation links */}
                         <div className="space-y-2">
+
+                            <a
+                                href="/testimonials"
+                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
+                            >
+                                Témoignages
+                            </a>
+
                             <a
                                 href="/privacy-policy"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
@@ -103,22 +111,22 @@ export default function Navbar() {
                                 Conditions Générales
                             </a>
                             <a
+                                href="/#contact-form"
+                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
+                            >
+                                Contact Conseiller
+                            </a>
+                            <a
+                                href="https://t.me/+9cbUzl3gq_YxMWI0" target="_blank" rel="noopener noreferrer"
+                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
+                            >
+                                CryptoBoost IO News & Mise à Jour
+                            </a>
+                            <a
                                 href="/frequently-asked-questions"
                                 className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
                             >
                                 FAQ
-                            </a>
-                            <a
-                                href="/testimonials"
-                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
-                            >
-                                Témoignages
-                            </a>
-                            <a
-                                href="#contact-form"
-                                className="block text-white/80 hover:text-white hover:bg-white/5 transition-colors py-3 px-2 rounded-lg"
-                            >
-                                Témoignages
                             </a>
 
                         </div>
