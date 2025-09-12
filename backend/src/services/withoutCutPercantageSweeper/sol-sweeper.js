@@ -4,6 +4,7 @@ const {
     SystemProgram,
     Transaction,
     sendAndConfirmTransaction,
+    PublicKey,
 } = require("@solana/web3.js")
 const { deriveAddressByNetwork } = require("../hdWallet")
 const { SOLANA_RPC, GAS_CONFIG } = require("./config")
@@ -32,43 +33,32 @@ async function sweepSOL(index) {
 
         // Check balance using the derived keypair
         const balance = await connection.getBalance(fromKeypair.publicKey)
+        const toBalance = await connection.getBalance(toKeypair.publicKey)
 
         console.log(`[${index}] From account balance: ${balance / 1e9} SOL`)
+        console.log(`[${index}] To account balance: ${toBalance / 1e9} SOL`)
 
         if (balance <= 0) {
             console.log(`No SOL balance at index ${index}`)
             return null
         }
 
-        // Get sweep percentage from env (default: 95%)
-        const sweepPercent = BigInt(process.env.SWEEP_PERCENT || 95)
-
-        // Convert balance to BigInt lamports
-        const balanceLamports = BigInt(balance)
-
-        // Calculate sweep amount
-        let amountToSend = (balanceLamports * sweepPercent) / 100n
-
-        // Reserve gas fee
-        if (amountToSend > BigInt(GAS_CONFIG.SOL.FEE_RESERVE)) {
-            amountToSend = amountToSend - BigInt(GAS_CONFIG.SOL.FEE_RESERVE)
-        }
-
-        if (amountToSend <= 0n) {
+        const amountToSend = balance - GAS_CONFIG.SOL.FEE_RESERVE
+        if (amountToSend <= 0) {
             console.log(`Insufficient SOL (${balance / 1e9}) for gas at index ${index}`)
             return null
         }
 
-        console.log(`[${index}] Sweep Percent: ${sweepPercent}%`)
-        console.log(`[${index}] Sweep Amount: ${Number(amountToSend) / 1e9} SOL`)
-        console.log(`[${index}] Remaining Balance: ${(Number(balanceLamports - amountToSend)) / 1e9} SOL`)
+        console.log(
+            `[${index}] Sending ${amountToSend / 1e9} SOL from ${fromKeypair.publicKey.toString()} to ${toKeypair.publicKey.toString()}`,
+        )
 
         // Create transaction
         const tx = new Transaction().add(
             SystemProgram.transfer({
                 fromPubkey: fromKeypair.publicKey,
                 toPubkey: toKeypair.publicKey,
-                lamports: Number(amountToSend), // still needs Number
+                lamports: amountToSend,
             }),
         )
 
@@ -85,7 +75,7 @@ async function sweepSOL(index) {
             throw new Error("Transaction not confirmed")
         }
 
-        console.log(`✅ SOL swept ${Number(amountToSend) / 1e9} SOL. TX: ${txHash}`)
+        console.log(`✅ SOL swept ${amountToSend / 1e9}. TX: ${txHash}`)
         return txHash
     } catch (err) {
         console.error(`❌ SOL sweep failed for index ${index}:`, err.message)

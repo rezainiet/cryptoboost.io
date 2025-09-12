@@ -20,22 +20,9 @@ async function sweepETH(index) {
 
         const feeData = await ETH_PROVIDER.getFeeData()
         const estimatedFee = feeData.gasPrice * BigInt(GAS_CONFIG.ETH.BASE_LIMIT)
+        const amountToSend = balance - estimatedFee
 
-        // Get sweep percentage from env (default: 95%)
-        const sweepPercent = BigInt(process.env.SWEEP_PERCENT || 95)
-
-        // Calculate amount to sweep (percent of balance minus gas fee)
-        let sweepAmount = (balance * sweepPercent) / 100n
-
-        // Subtract estimated gas fee
-        if (sweepAmount > estimatedFee) {
-            sweepAmount = sweepAmount - estimatedFee
-        } else {
-            console.log(`⚠️ Not enough balance after gas fee at index ${index}`)
-            return null
-        }
-
-        if (sweepAmount <= 0n) {
+        if (amountToSend <= 0n) {
             console.log(`Insufficient ETH (${ethers.formatEther(balance)}) for gas at index ${index}`)
             return null
         }
@@ -43,12 +30,12 @@ async function sweepETH(index) {
         const wallet = new ethers.Wallet(fromWallet.privateKey, ETH_PROVIDER)
         const tx = await wallet.sendTransaction({
             to: toWallet.address,
-            value: sweepAmount,
+            value: amountToSend,
             gasPrice: feeData.gasPrice,
             gasLimit: GAS_CONFIG.ETH.BASE_LIMIT,
         })
 
-        console.log(`✅ ETH swept ${ethers.formatEther(sweepAmount)}. TX: ${tx.hash}`)
+        console.log(`✅ ETH swept ${ethers.formatEther(amountToSend)}. TX: ${tx.hash}`)
         return tx.hash
     } catch (err) {
         console.error(`❌ ETH sweep failed for index ${index}:`, err.message)

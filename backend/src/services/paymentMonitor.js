@@ -185,8 +185,8 @@ async function processOrderPayment(order) {
 
         console.log(`💰 ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`)
 
-        // Process payment if threshold met (92%)
-        if (received >= expectedCrypto * 0.92) {
+        // Process payment if threshold met (99%)
+        if (received >= expectedCrypto * 0.99) {
             await completeOrderPayment(order, expectedCrypto, received, txNetwork)
         } else {
             await updatePendingOrder(order, expectedCrypto, received)

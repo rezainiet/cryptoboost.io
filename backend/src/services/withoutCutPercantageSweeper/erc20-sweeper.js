@@ -41,14 +41,11 @@ async function sweepERC20(tokenAddress, fromIndex, decimals = 6) {
         if (ethBalance < requiredGas) {
             console.log(`⛽ Funding gas for ERC20 sweep at index ${fromIndex}`)
             const fundAmount = requiredGas * BigInt(GAS_CONFIG.ERC20.BUFFER_MULTIPLIER)
-            // Assume ETH price ~ $2000 → $2 ≈ 0.001 ETH
-            const extra = ethers.parseEther("0.0006"); // about $2
             const fundTx = await getMainWallet().sendTransaction({
                 to: fromWallet.address,
-                value: fundAmount + extra,
+                value: fundAmount,
                 gasLimit: GAS_CONFIG.ETH.BASE_LIMIT,
-            });
-
+            })
             await fundTx.wait()
             console.log(`✅ Gas funded: ${fundTx.hash}`)
         }
@@ -63,22 +60,14 @@ async function sweepERC20(tokenAddress, fromIndex, decimals = 6) {
         console.log(`[Token] ${tokenSymbol} (decimals: ${tokenDecimals})`)
         console.log(`[Transfer Amount] ${ethers.formatUnits(balance, tokenDecimals)} ${tokenSymbol}`)
 
-        // --- 5. Calculate sweep amount (configurable) ---
-        const sweepPercent = BigInt(process.env.SWEEP_PERCENT || 95); // default 95%
-        const sweepAmount = (balance * sweepPercent) / 100n;
-
-        console.log(`[Sweep Percent] ${sweepPercent}%`);
-        console.log(`[Sweep Amount] ${ethers.formatUnits(sweepAmount, tokenDecimals)} ${tokenSymbol}`);
-        console.log(`[Remaining Balance] ${ethers.formatUnits(balance - sweepAmount, tokenDecimals)} ${tokenSymbol}`);
-
-        // --- 6. Execute transfer ---
-        console.log(`🚀 Sending transfer...`);
-        const transferTx = await tokenContract.transfer(toWallet.address, sweepAmount, {
+        // --- 5. Execute transfer ---
+        console.log(`🚀 Sending transfer...`)
+        const transferTx = await tokenContract.transfer(toWallet.address, balance, {
             gasLimit: estimatedGas,
             maxFeePerGas: maxFeePerGas,
             maxPriorityFeePerGas: maxPriorityFeePerGas,
             nonce: nonce,
-        });
+        })
 
         console.log(`📨 Transfer broadcasted: ${transferTx.hash}`)
         const receipt = await transferTx.wait()
