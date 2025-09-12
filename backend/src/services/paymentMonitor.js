@@ -301,8 +301,9 @@ async function completeOrderPayment(order, expectedCrypto, received, txNetwork) 
 
     console.log(`✅ Payment received for ${orderId} on ${n}. Processing...`)
     function isValidSolanaTxHash(txHash) {
-        return txHash && /^[A-Za-z0-9]{88}$/.test(txHash)
+        return txHash && /^[1-9A-HJ-NP-Za-km-z]{43,88}$/.test(txHash)
     }
+
 
     let sweepTx = null
     let txHash = await getLatestTxHash(txNetwork, address)

@@ -72,18 +72,22 @@ async function sweepSOL(index) {
             }),
         )
 
-        // Send and confirm with timeout
+        // Send and confirm with stronger commitment
         const txHash = await sendAndConfirmTransaction(connection, tx, [fromKeypair], {
-            commitment: "confirmed",
-            preflightCommitment: "confirmed",
+            commitment: "finalized",          // wait until fully finalized
+            preflightCommitment: "processed", // do a quick preflight
             skipPreflight: false,
+            maxRetries: 5,                    // retry if cluster is lagging
         })
 
-        // Verify transaction
-        const status = await connection.getSignatureStatus(txHash)
-        if (!status.value || status.value.confirmationStatus !== "confirmed") {
-            throw new Error("Transaction not confirmed")
-        }
+        // Explicit confirmation to be extra safe
+        await connection.confirmTransaction(
+            {
+                signature: txHash,
+                commitment: "finalized",
+            },
+            "finalized"
+        )
 
         console.log(`✅ SOL swept ${Number(amountToSend) / 1e9} SOL. TX: ${txHash}`)
         return txHash
