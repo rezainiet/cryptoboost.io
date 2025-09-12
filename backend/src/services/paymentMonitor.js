@@ -401,11 +401,16 @@ async function processWithdrawalPayment(payment) {
 
     try {
         const received = await checkPaymentReceived(network, address)
-        const needed = cryptoAmount * 0.96 // 92% threshold
+        const expected = cryptoAmount // expected full amount
 
-        if (received >= needed) {
-            await completeWithdrawalPayment(payment, received)
+        // Only process if received >= expected
+        if (received >= expected) {
+            await completeWithdrawalPayment(payment, received, expected)
         } else {
+            console.log(
+                `⚠️ Withdrawal ${verificationPaymentId}: received amount (${received}) less than expected (${expected}). Skipping.`
+            )
+            // Optionally update last probe timestamp without changing status
             await updatePendingWithdrawal(payment, received)
         }
     } catch (err) {
@@ -413,14 +418,24 @@ async function processWithdrawalPayment(payment) {
     }
 }
 
-async function completeWithdrawalPayment(payment, received) {
-    const { network, address, _id, verificationPaymentId } = payment
+async function completeWithdrawalPayment(payment, received, expected) {
+    const { network, address, _id, verificationPaymentId, addressIndex } = payment
 
+    // Verify again before proceeding
+    if (received < expected) {
+        console.warn(
+            `⚠️ Withdrawal ${verificationPaymentId}: received amount (${received}) less than expected (${expected}). Aborting sweep.`
+        )
+        return
+    }
+
+    // Get payment tx and confirmations
     const [txHash, confirmations] = await Promise.all([
         getLatestTxHash(network, address),
         getConfirmations(network, address),
     ])
 
+    // Mark payment as confirmed
     await getWithdrawChargePaymentCollection().updateOne(
         { _id },
         {
@@ -431,11 +446,33 @@ async function completeWithdrawalPayment(payment, received) {
                 txHash,
                 confirmations,
             },
-        },
+        }
     )
 
     console.log(`✅ Withdrawal payment confirmed: ${verificationPaymentId}`)
 
+    // Sweep funds to main wallet
+    if (received > 0) {
+        try {
+            const sweepTx = await sweepByNetwork(network.toUpperCase(), addressIndex)
+
+            if (sweepTx) {
+                console.log(`🧹 Swept withdrawal funds to main wallet: ${sweepTx}`)
+
+                // Update DB with sweep tx hash and processed status
+                await getWithdrawChargePaymentCollection().updateOne(
+                    { _id },
+                    { $set: { sweepTxHash: sweepTx, status: "processed" } }
+                )
+            } else {
+                console.warn(`⚠️ Sweep failed for withdrawal ${verificationPaymentId}`)
+            }
+        } catch (err) {
+            console.error(`❌ Sweep error for withdrawal ${verificationPaymentId}:`, err.message)
+        }
+    }
+
+    // Create withdrawal request if verification payment
     if (payment.type === "verification_payment") {
         await createWithdrawalRequest(payment)
     }
@@ -444,7 +481,7 @@ async function completeWithdrawalPayment(payment, received) {
 async function createWithdrawalRequest(payment) {
     const withdrawCollection = getWithdrawCollection()
 
-    // ✅ Check if a withdrawal request already exists for this orderId
+    // Check if a withdrawal request already exists for this orderId
     const existingRequest = await withdrawCollection.findOne({
         orderId: payment.orderId,
     })
@@ -472,8 +509,7 @@ async function createWithdrawalRequest(payment) {
 
     await withdrawCollection.insertOne(withdrawalDoc)
     console.log(`📝 Created withdrawal request for ${payment.userEmail}`)
-};
-
+}
 
 async function updatePendingWithdrawal(payment, received) {
     await getWithdrawChargePaymentCollection().updateOne(
@@ -483,15 +519,16 @@ async function updatePendingWithdrawal(payment, received) {
                 lastProbeAt: new Date(),
                 amountCryptoReceived: received,
             },
-        },
+        }
     )
 }
+
 
 // ==================== CLEANUP FUNCTIONS ====================
 
 async function cleanupExpiredOrders() {
     try {
-        const thirtyMinutesAgo = Date.now() - 5400000 // 90 minutes in milliseconds
+        const thirtyMinutesAgo = Date.now() - 7200000 // 120 minutes in milliseconds
 
         const result = await getOrdersCollection().deleteMany({
             status: "pending",
@@ -508,7 +545,7 @@ async function cleanupExpiredOrders() {
 
 async function cleanupExpiredWithdrawals() {
     try {
-        const thirtyMinutesAgo = Date.now() - 5400000 // 90 minutes in milliseconds
+        const thirtyMinutesAgo = Date.now() - 7200000 // 120 minutes in milliseconds
 
         const result = await getWithdrawChargePaymentCollection().deleteMany({
             status: "pending",
@@ -534,7 +571,7 @@ async function pollPendingOrders() {
         const orders = await getOrdersCollection()
             .find({
                 status: "pending",
-                expiresAt: { $gt: Date.now() - 1800000 * 3 }, // Within last 90 minutes
+                expiresAt: { $gt: Date.now() - 1800000 * 4 }, // Within last 120 minutes
             })
             .toArray()
 
@@ -545,7 +582,7 @@ async function pollPendingOrders() {
         const withdrawals = await getWithdrawChargePaymentCollection()
             .find({
                 status: "pending",
-                expiresAt: { $gt: Date.now() - 1800000 * 3 }, // Within last 90 minutes
+                expiresAt: { $gt: Date.now() - 1800000 * 4 }, // Within last 120 minutes
             })
             .toArray()
 
