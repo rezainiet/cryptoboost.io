@@ -1,5 +1,7 @@
 "use client"
 
+import { LucideSend } from "lucide-react"
+
 const Footer = () => {
     const currentYear = new Date().getFullYear()
 
@@ -45,16 +47,9 @@ const Footer = () => {
                         </p>
                         <div className="flex space-x-4">
                             <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center hover:bg-teal-500 transition-colors cursor-pointer">
-                                <span className="text-sm font-bold">f</span>
-                            </div>
-                            <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center hover:bg-teal-500 transition-colors cursor-pointer">
-                                <span className="text-sm font-bold">t</span>
-                            </div>
-                            <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center hover:bg-teal-500 transition-colors cursor-pointer">
-                                <span className="text-sm font-bold">in</span>
-                            </div>
-                            <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center hover:bg-teal-500 transition-colors cursor-pointer">
-                                <span className="text-sm font-bold">@</span>
+                                <a href="https://t.me/Louis_botcrypto" target="_blank" rel="noopener noreferrer"><span className="text-sm font-bold">
+                                    <LucideSend />
+                                </span></a>
                             </div>
                         </div>
                     </div>

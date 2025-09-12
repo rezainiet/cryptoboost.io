@@ -3,32 +3,38 @@
 import { useState, useEffect } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth } from "../../firebase"
+import { Download } from "lucide-react"
 
 const UserManagement = () => {
-    const [user] = useAuthState(auth);
+    const [user] = useAuthState(auth)
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [searchTerm, setSearchTerm] = useState("")
+    const [itemsPerPage, setItemsPerPage] = useState(10)
+    const [isExporting, setIsExporting] = useState(false)
 
     useEffect(() => {
         fetchUsers()
-    }, [currentPage, searchTerm])
+    }, [currentPage, searchTerm, itemsPerPage])
 
     const fetchUsers = async () => {
         try {
             setLoading(true)
-            const response = await fetch(`https://api.cryptoboost.capital/api/admin/users?page=${currentPage}&limit=10&search=${searchTerm}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "user-email": user?.email || "",
+            const response = await fetch(
+                `https://api.cryptoboost.capital/api/admin/users?page=${currentPage}&limit=${itemsPerPage}&search=${searchTerm}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "user-email": user?.email || "",
+                    },
+                    body: JSON.stringify({
+                        userEmail: user?.email || "",
+                    }),
                 },
-                body: JSON.stringify({
-                    userEmail: user?.email || "",
-                }),
-            })
+            )
             const data = await response.json()
 
             if (data.success) {
@@ -45,6 +51,65 @@ const UserManagement = () => {
     const handleSearch = (e) => {
         setSearchTerm(e.target.value)
         setCurrentPage(1)
+    }
+
+    const handleItemsPerPageChange = (newLimit) => {
+        setItemsPerPage(newLimit)
+        setCurrentPage(1)
+    }
+
+    const generateCSV = (data, filename) => {
+        const headers = [
+            "Name",
+            "Email",
+            "Phone",
+            "Role",
+            "Total Invested",
+            "Total Orders",
+            "Completed Orders",
+            "Joined Date",
+            "Status",
+        ]
+        const csvContent = [
+            headers.join(","),
+            ...data.map((user) =>
+                [
+                    `"${user.name || "Unknown"}"`,
+                    `"${user.email || ""}"`,
+                    `"${user.phone || "No phone"}"`,
+                    `"${user.role || "user"}"`,
+                    `"${user.totalInvested?.toLocaleString() || "0"}"`,
+                    `"${user.totalOrders || 0}"`,
+                    `"${user.completedOrders || 0}"`,
+                    `"${formatDate(user.createdAt)}"`,
+                    `"${user.lastActive && Date.now() - user.lastActive < 30 * 24 * 60 * 60 * 1000 ? "Active" : "Inactive"}"`,
+                ].join(","),
+            ),
+        ].join("\n")
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+        const link = document.createElement("a")
+        const url = URL.createObjectURL(blob)
+        link.setAttribute("href", url)
+        link.setAttribute("download", filename)
+        link.style.visibility = "hidden"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
+    const handleExport = async () => {
+        setIsExporting(true)
+
+        try {
+            const filename = `users-page-${currentPage}-${new Date().toISOString().split("T")[0]}.csv`
+            generateCSV(users, filename)
+        } catch (error) {
+            console.error("Export failed:", error)
+            alert("Export failed. Please try again.")
+        } finally {
+            setIsExporting(false)
+        }
     }
 
     const formatDate = (dateString) => {
@@ -69,6 +134,30 @@ const UserManagement = () => {
                             className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
+
+                    <select
+                        value={itemsPerPage}
+                        onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                        className="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value={5}>5 per page</option>
+                        <option value={10}>10 per page</option>
+                        <option value={25}>25 per page</option>
+                        <option value={50}>50 per page</option>
+                        <option value={100}>100 per page</option>
+                        <option value={250}>250 per page</option>
+                        <option value={500}>500 per page</option>
+                    </select>
+
+                    <button
+                        onClick={handleExport}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                    >
+                        <Download size={16} />
+                        {isExporting ? "Exporting..." : "Export CSV"}
+                    </button>
+
                     <button
                         onClick={fetchUsers}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -126,7 +215,7 @@ const UserManagement = () => {
                                                 {user.role || "user"}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-slate-300">€{user.totalInvested?.toLocaleString() || "0"}</td>
+                                        <td className="p-4 text-slate-300">{user.totalInvested?.toLocaleString() || "0"}</td>
                                         <td className="p-4 text-slate-300">
                                             <div className="text-sm">
                                                 <div>{user.totalOrders || 0} total</div>

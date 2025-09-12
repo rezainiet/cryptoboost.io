@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import React from "react"
+import { Download } from "lucide-react"
 
 const StatusBadge = React.memo(({ status }) => {
     const getStatusColor = (status) => {
@@ -60,70 +61,111 @@ const SubmissionRow = React.memo(({ submission, updateStatus }) => {
 })
 SubmissionRow.displayName = "SubmissionRow"
 
-
 const ContactSupport = () => {
     const [submissions, setSubmissions] = useState([])
     const [loading, setLoading] = useState(false)
     const [statusFilter, setStatusFilter] = useState("all")
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
-    const submissionsPerPage = 10
+    const [submissionsPerPage, setSubmissionsPerPage] = useState(10)
+    const [exportLoading, setExportLoading] = useState(false)
 
-    // Fetch form submissions (memoized with abort controller)
-    const fetchSubmissions = useCallback(async (page = 1, status = "all") => {
-        setLoading(true)
-        const controller = new AbortController()
+    const fetchSubmissions = useCallback(
+        async (page = 1, status = "all", limit = submissionsPerPage) => {
+            setLoading(true)
+            const controller = new AbortController()
 
-        try {
-            const params = new URLSearchParams()
-            params.append("page", page)
-            params.append("limit", submissionsPerPage)
-            if (status !== "all") params.append("status", status)
+            try {
+                const params = new URLSearchParams()
+                params.append("page", page)
+                params.append("limit", limit)
+                if (status !== "all") params.append("status", status)
 
-            const response = await fetch(
-                `https://api.cryptoboost.capital/api/contact-form/admin/form-submissions?${params.toString()}`,
-                { signal: controller.signal }
-            )
-            const data = await response.json()
-            if (data.success) {
-                setSubmissions(data.data.submissions || [])
-                setCurrentPage(data.data.pagination.currentPage)
-                setTotalPages(data.data.pagination.totalPages)
+                const response = await fetch(
+                    `https://api.cryptoboost.capital/api/contact-form/admin/form-submissions?${params.toString()}`,
+                    { signal: controller.signal },
+                )
+                const data = await response.json()
+                if (data.success) {
+                    setSubmissions(data.data.submissions || [])
+                    setCurrentPage(data.data.pagination.currentPage)
+                    setTotalPages(data.data.pagination.totalPages)
+                }
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    console.error("Error fetching submissions:", error)
+                }
+            } finally {
+                setLoading(false)
             }
-        } catch (error) {
-            if (error.name !== "AbortError") {
-                console.error("Error fetching submissions:", error)
-            }
-        } finally {
-            setLoading(false)
-        }
 
-        return () => controller.abort()
-    }, [])
+            return () => controller.abort()
+        },
+        [submissionsPerPage],
+    )
 
-    // Update submission status (memoized)
-    const updateStatus = useCallback(async (id, newStatus) => {
-        try {
-            const response = await fetch(
-                `https://api.cryptoboost.capital/api/contact-form/admin/form-submissions/${id}`,
-                {
+    const updateStatus = useCallback(
+        async (id, newStatus) => {
+            try {
+                const response = await fetch(`https://api.cryptoboost.capital/api/contact-form/admin/form-submissions/${id}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ status: newStatus }),
+                })
+                const data = await response.json()
+                if (data.success) {
+                    fetchSubmissions(currentPage, statusFilter) // refresh
                 }
-            )
-            const data = await response.json()
-            if (data.success) {
-                fetchSubmissions(currentPage, statusFilter) // refresh
+            } catch (error) {
+                console.error("Error updating status:", error)
             }
+        },
+        [currentPage, statusFilter, fetchSubmissions],
+    )
+
+    const exportToCSV = useCallback(async () => {
+        setExportLoading(true)
+        try {
+            // Convert to CSV
+            const headers = ["Name", "Email", "Phone", "Investment Amount", "Preferred Crypto", "Status", "Date"]
+            const csvContent = [
+                headers.join(","),
+                ...submissions.map((submission) =>
+                    [
+                        `"${submission.firstName} ${submission.lastName}"`,
+                        `"${submission.email}"`,
+                        `"${submission.phone}"`,
+                        `"${submission.investmentAmount}"`,
+                        `"${submission.preferredCrypto}"`,
+                        `"${submission.status}"`,
+                        `"${submission.createdAt ? new Date(submission.createdAt).toLocaleString() : "N/A"}"`,
+                    ].join(","),
+                ),
+            ].join("\n")
+
+            // Download CSV
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+            const link = document.createElement("a")
+            const url = URL.createObjectURL(blob)
+            link.setAttribute("href", url)
+            link.setAttribute(
+                "download",
+                `contact-submissions-page-${currentPage}-${new Date().toISOString().split("T")[0]}.csv`,
+            )
+            link.style.visibility = "hidden"
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
         } catch (error) {
-            console.error("Error updating status:", error)
+            console.error("Error exporting CSV:", error)
+        } finally {
+            setExportLoading(false)
         }
-    }, [currentPage, statusFilter, fetchSubmissions])
+    }, [submissions, currentPage])
 
     useEffect(() => {
-        fetchSubmissions(currentPage, statusFilter)
-    }, [currentPage, statusFilter, fetchSubmissions])
+        fetchSubmissions(currentPage, statusFilter, submissionsPerPage)
+    }, [currentPage, statusFilter, submissionsPerPage, fetchSubmissions])
 
     const statusOptions = useMemo(
         () => [
@@ -132,7 +174,20 @@ const ContactSupport = () => {
             { value: "contacted", label: "Contacted" },
             { value: "ignored", label: "Ignored" },
         ],
-        []
+        [],
+    )
+
+    const pageSizeOptions = useMemo(
+        () => [
+            { value: 5, label: "5 per page" },
+            { value: 10, label: "10 per page" },
+            { value: 25, label: "25 per page" },
+            { value: 50, label: "50 per page" },
+            { value: 100, label: "100 per page" },
+            { value: 250, label: "250 per page" },
+            { value: 500, label: "500 per page" },
+        ],
+        [],
     )
 
     return (
@@ -140,7 +195,7 @@ const ContactSupport = () => {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Contact Support Requests</h1>
                 <button
-                    onClick={() => fetchSubmissions(currentPage, statusFilter)}
+                    onClick={() => fetchSubmissions(currentPage, statusFilter, submissionsPerPage)}
                     disabled={loading}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
                 >
@@ -148,7 +203,7 @@ const ContactSupport = () => {
                 </button>
             </div>
 
-            <div className="flex gap-4 mb-4">
+            <div className="flex flex-wrap gap-4 mb-4 items-center">
                 <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
@@ -160,7 +215,33 @@ const ContactSupport = () => {
                         </option>
                     ))}
                 </select>
+
+                <select
+                    value={submissionsPerPage}
+                    onChange={(e) => {
+                        setSubmissionsPerPage(Number(e.target.value))
+                        setCurrentPage(1) // Reset to first page when changing page size
+                    }}
+                    className="px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                    {pageSizeOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+
+                <button
+                    onClick={exportToCSV}
+                    disabled={exportLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                    <Download size={16} />
+                    {exportLoading ? "Exporting..." : "Export CSV"}
+                </button>
             </div>
+
+            {exportLoading && <div className="mb-4 p-3 bg-blue-600 text-white rounded-lg">Preparing CSV export...</div>}
 
             <div className="bg-gray-800 rounded-lg shadow-md overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-700">
@@ -184,10 +265,9 @@ const ContactSupport = () => {
                 </table>
             </div>
 
-            {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
                 <div className="text-sm text-gray-400">
-                    Page {currentPage} of {totalPages}
+                    Page {currentPage} of {totalPages} ({submissionsPerPage} items per page)
                 </div>
                 <div className="flex space-x-2">
                     <button
