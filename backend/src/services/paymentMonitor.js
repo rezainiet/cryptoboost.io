@@ -146,6 +146,10 @@ async function checkERC20Balance(tokenAddress, userAddress, decimals = 18) {
 
 async function checkSOLBalance(address) {
     try {
+        if (!address) {
+            return 0
+        }
+
         const connection = new Connection(SOLANA_RPC)
         const publicKey = new PublicKey(address)
         const balance = await connection.getBalance(publicKey)
@@ -155,6 +159,7 @@ async function checkSOLBalance(address) {
         return 0
     }
 }
+
 
 async function processOrderPayment(order) {
     const { network, address, amountFiat, orderId, addressIndex } = order
