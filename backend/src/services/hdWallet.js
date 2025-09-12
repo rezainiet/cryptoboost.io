@@ -51,7 +51,7 @@ function deriveBTCAddress(index = 0) {
 
     const pubkey = Buffer.isBuffer(node.publicKey) ? node.publicKey : Buffer.from(node.publicKey);
     const { address } = bitcoin.payments.p2wpkh({ pubkey, network });
-    return { address, path };
+    return { address, path, index };
 }
 
 // Fixed SOL Address Derivation
@@ -88,6 +88,7 @@ function deriveSOLAddresss(index = 0) {
     return {
         address: keypair.publicKey.toString(),
         path,
+        index,
         privateKey: Buffer.from(keypair.secretKey).toString("hex"),
     }
 }
@@ -99,6 +100,7 @@ function deriveSOLAddress(index) {
     const keypair = Keypair.fromSeed(derivedSeed)
     return {
         address: keypair.publicKey.toString(),
+        index,
         path,
         privateKey: Buffer.from(keypair.secretKey).toString("hex"),
     }
@@ -111,6 +113,7 @@ function deriveETHAddress(index = 0) {
     return {
         address: wallet.address,
         path,
+        index,
         privateKey: wallet.privateKey
     };
 }
@@ -122,7 +125,7 @@ function deriveTRXAddress(index = 0) {
     const privKeyHex = node.privateKey.toString("hex");
     const tronWeb = new TronWeb({ fullHost: "https://api.trongrid.io" });
     const address = tronWeb.address.fromPrivateKey(privKeyHex);
-    return { address, path, privateKey: privKeyHex };
+    return { address, path, index, privateKey: privKeyHex };
 }
 
 // ---------------- Dispatcher ----------------
@@ -142,7 +145,7 @@ async function deriveAddressByNetwork(network, index) {
     }
 }
 
-function getPrivateKeyForSOLAddress(targetAddress, maxIndex = 100) {
+function getPrivateKeyForSOLAddress(targetAddress, maxIndex = 1000) {
 
     for (let index = 0; index <= maxIndex; index++) {
         const { address, privateKey } = deriveSOLAddress(index)

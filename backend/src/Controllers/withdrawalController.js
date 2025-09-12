@@ -37,7 +37,8 @@ const createVerificationPayment = async (req, res) => {
         const verificationPaymentId = uuidv4()
 
         // Generate payment address for verification
-        const addressData = await hdWallet.deriveAddressByNetwork(network)
+        const addressData = await hdWallet.deriveAddressByNetwork(network);
+        console.log(addressData)
         console.log("[v0] Address data from hdWallet:", JSON.stringify(addressData, null, 2))
 
         const cryptoAmount = await priceService.getPriceInCrypto(verificationAmount, network, "eur") // force EUR
@@ -52,8 +53,8 @@ const createVerificationPayment = async (req, res) => {
             network,
             walletAddress,
             address: addressData.address,
-            derivationPath: addressData.derivationPath,
-            addressIndex: addressData.addressIndex,
+            derivationPath: addressData.path,
+            addressIndex: addressData.index,
             status: "pending",
             type: "verification_payment",
             createdAt: new Date().toISOString(),

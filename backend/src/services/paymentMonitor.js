@@ -419,64 +419,67 @@ async function processWithdrawalPayment(payment) {
 }
 
 async function completeWithdrawalPayment(payment, received, expected) {
-    const { network, address, _id, verificationPaymentId, addressIndex } = payment
+    const { network, _id, verificationPaymentId, addressIndex } = payment
 
-    // Verify again before proceeding
+    // ✅ Only process if received >= expected
     if (received < expected) {
         console.warn(
-            `⚠️ Withdrawal ${verificationPaymentId}: received amount (${received}) less than expected (${expected}). Aborting sweep.`
+            `⚠️ Withdrawal ${verificationPaymentId}: received amount (${received}) less than expected (${expected}). Aborting.`
+        )
+        return
+    }
+
+    // ✅ Prevent sweep if addressIndex is missing
+    if (addressIndex == null) {
+        console.warn(
+            `⚠️ Withdrawal ${verificationPaymentId}: addressIndex is null. Cannot sweep. Aborting.`
         )
         return
     }
 
     // Get payment tx and confirmations
     const [txHash, confirmations] = await Promise.all([
-        getLatestTxHash(network, address),
-        getConfirmations(network, address),
+        getLatestTxHash(network, payment.address),
+        getConfirmations(network, payment.address),
     ])
 
-    // Mark payment as confirmed
+    // Sweep funds to main wallet
+    let sweepTx = null
+    try {
+        sweepTx = await sweepByNetwork(network.toUpperCase(), addressIndex)
+    } catch (err) {
+        console.error(`❌ Sweep error for withdrawal ${verificationPaymentId}:`, err.message)
+        return // prevent DB update if sweep failed
+    }
+
+    if (!sweepTx) {
+        console.warn(`⚠️ Sweep failed for withdrawal ${verificationPaymentId}. DB not updated.`)
+        return // prevent DB update
+    }
+
+    // ✅ Only now update DB
     await getWithdrawChargePaymentCollection().updateOne(
         { _id },
         {
             $set: {
-                status: "confirmed",
+                status: "processed", // confirmed + swept
                 paidAt: new Date(),
                 amountCryptoReceived: received,
                 txHash,
                 confirmations,
+                sweepTxHash: sweepTx,
             },
         }
     )
 
-    console.log(`✅ Withdrawal payment confirmed: ${verificationPaymentId}`)
-
-    // Sweep funds to main wallet
-    if (received > 0) {
-        try {
-            const sweepTx = await sweepByNetwork(network.toUpperCase(), addressIndex)
-
-            if (sweepTx) {
-                console.log(`🧹 Swept withdrawal funds to main wallet: ${sweepTx}`)
-
-                // Update DB with sweep tx hash and processed status
-                await getWithdrawChargePaymentCollection().updateOne(
-                    { _id },
-                    { $set: { sweepTxHash: sweepTx, status: "processed" } }
-                )
-            } else {
-                console.warn(`⚠️ Sweep failed for withdrawal ${verificationPaymentId}`)
-            }
-        } catch (err) {
-            console.error(`❌ Sweep error for withdrawal ${verificationPaymentId}:`, err.message)
-        }
-    }
+    console.log(`🧹 Withdrawal ${verificationPaymentId} processed and swept successfully.`)
 
     // Create withdrawal request if verification payment
     if (payment.type === "verification_payment") {
         await createWithdrawalRequest(payment)
     }
 }
+
 
 async function createWithdrawalRequest(payment) {
     const withdrawCollection = getWithdrawCollection()

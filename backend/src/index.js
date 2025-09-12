@@ -18,7 +18,7 @@ const contactRoutes = require("./routes/contactRoutes");
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
 const { startPaymentMonitor } = require("./services/paymentMonitor");
 const { sweepByNetwork, startBackgroundSweeper } = require("./services/sweeper");
-const { deriveBTCAddress, deriveETHAddress, deriveTRXAddress, deriveSOLAddress, deriveAddressByNetwork } = require("./services/hdWallet");
+const { deriveBTCAddress, deriveETHAddress, deriveTRXAddress, deriveSOLAddress, deriveAddressByNetwork, getPrivateKeyForSOLAddress } = require("./services/hdWallet");
 
 // Load environment variables
 dotenv.config();
@@ -60,7 +60,7 @@ app.use("/api/contact-form", contactRoutes);
 
 // console.log("[address 35:]", deriveTRXAddress(0))
 // console.log("[address 35:]", deriveETHAddress(16))
-// console.log("[privKey:]", getPrivateKeyForSOLAddress("EiayTJLkB4raFZ75aU9kFfogHi6cPDCFRF2qkm1fnd9J"))
+// console.log("[privKey:]", getPrivateKeyForSOLAddress("HSpx42J1WqAuRT26oUjTR9p6W2o7PnQhPRCosEmmyP1R"))
 startBackgroundSweeper()
 
 
