@@ -77,10 +77,12 @@ const PaymentPage = () => {
         const total = baseAmount + baseAmount * vatRate // Removed processing fee
         setTotalWithFees(total)
 
-        if (cryptoPrices[selectedPayment]) {
+        if (cryptoPrices[selectedPayment] && cryptoPrices[selectedPayment] > 0) {
             const cryptoValue = total / cryptoPrices[selectedPayment]
             setCryptoAmount(cryptoValue)
             console.log("[v0] Calculated crypto amount:", cryptoValue, "for", selectedPayment)
+        } else {
+            setCryptoAmount(0)
         }
     }, [initialPkg, selectedPayment, cryptoPrices])
 
@@ -241,7 +243,7 @@ const PaymentPage = () => {
         setQrCodeUrl(null)
         setAddressError(null)
 
-        if (initialPkg && cryptoPrices[networkId]) {
+        if (initialPkg && cryptoPrices[networkId] && cryptoPrices[networkId] > 0) {
             const baseAmount = Number(initialPkg.investment)
             const vatRate = 0.05
             const total = baseAmount + baseAmount * vatRate
@@ -249,6 +251,8 @@ const PaymentPage = () => {
             const cryptoValue = total / cryptoPrices[networkId]
             setCryptoAmount(cryptoValue)
             console.log("[v0] Updated crypto amount for", networkId, ":", cryptoValue)
+        } else {
+            setCryptoAmount(0)
         }
     }
 
@@ -346,13 +350,20 @@ const PaymentPage = () => {
                         <div className="border-t border-slate-600/30 pt-4">
                             <div className="flex justify-between items-center text-lg mb-2">
                                 <span className="text-slate-300 font-mono">Total à Payer (EUR):</span>
-                                <span className="text-white font-bold text-2xl">€{totalWithFees.toLocaleString()}</span>
+                                <span className="text-white font-bold text-2xl">
+                                    {totalWithFees > 0 ? `€${totalWithFees.toLocaleString()}` : "Calcul en cours..."}
+                                </span>
                             </div>
                             <div className="flex justify-between items-center text-lg">
                                 <span className="text-slate-300 font-mono">Montant en {selectedPayment}:</span>
                                 <span className="text-cyan-400 font-bold text-xl">
-                                    {cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)}{" "}
-                                    {selectedPayment}
+                                    {loadingPrices
+                                        ? "Chargement..."
+                                        : !cryptoPrices[selectedPayment]
+                                            ? "Prix indisponible"
+                                            : cryptoAmount > 0
+                                                ? `${cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)} ${selectedPayment}`
+                                                : "Calcul en cours..."}
                                 </span>
                             </div>
                         </div>
@@ -493,8 +504,9 @@ const PaymentPage = () => {
                                 <ul className="text-slate-300 text-sm space-y-1">
                                     <li>
                                         • Envoyez exactement{" "}
-                                        {cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)}{" "}
-                                        {selectedPayment}
+                                        {cryptoAmount > 0
+                                            ? `${cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)} ${selectedPayment}`
+                                            : "montant en cours de calcul"}
                                     </li>
                                     <li>• Utilisez uniquement le réseau {selectedOption?.network}</li>
                                     <li>• Scannez le QR code ou copiez l'adresse</li>
