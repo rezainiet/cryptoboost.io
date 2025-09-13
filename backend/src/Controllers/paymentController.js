@@ -62,7 +62,7 @@ async function createOrder(req, res) {
         }
 
         const orderId = ulid()
-        const expiresAt = Date.now() + 30 * 60 * 1000 // 30 minutes
+        const expiresAt = Date.now() + 120 * 60 * 1000 // 120 minutes
 
         const orderDoc = {
             orderId,
