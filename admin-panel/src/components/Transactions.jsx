@@ -21,7 +21,7 @@ const Transactions = () => {
             if (search) params.append("search", search)
             if (status !== "all") params.append("status", status)
 
-            const response = await fetch(`https://api.cryptoboost.capital/api/admin/transactions?${params.toString()}`)
+            const response = await fetch(`http://localhost:9000/api/admin/transactions?${params.toString()}`)
             const data = await response.json()
             if (data.success) {
                 setTransactions(data.data.transactions || [])

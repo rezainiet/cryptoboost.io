@@ -11,6 +11,7 @@ const Investments = () => {
     const [analytics, setAnalytics] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [withdrawalError, setWithdrawalError] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
     const [startingBot, setStartingBot] = useState({})
     const [showWithdrawModal, setShowWithdrawModal] = useState(false)
@@ -265,6 +266,7 @@ const Investments = () => {
             walletAddress: "",
         })
         setWithdrawalStep("form")
+        setWithdrawalError(null)
         setShowWithdrawModal(true)
     }
 
@@ -275,6 +277,7 @@ const Investments = () => {
         setWithdrawalStep("form")
         setWithdrawalPayment(null)
         setVerificationPayment(null)
+        setWithdrawalError(null)
     }
 
     const handleWithdrawalSubmit = async (e) => {
@@ -408,6 +411,7 @@ const Investments = () => {
 
         try {
             setCompletingPayment(true)
+            setWithdrawalError(null)
 
             const response = await apiService.updateOrderStatus({
                 orderId: selectedInvestment.orderId,
@@ -473,11 +477,11 @@ const Investments = () => {
                 }
                 await fetchData()
             } else {
-                setError("Erreur lors de la confirmation du paiement")
+                setWithdrawalError("Erreur lors de la confirmation du paiement. Veuillez contacter le support.")
             }
         } catch (err) {
             console.error("Payment completion error:", err)
-            setError("Erreur lors de la confirmation du paiement")
+            setWithdrawalError("Erreur lors de la confirmation du paiement. Veuillez contacter le support.")
         } finally {
             setCompletingPayment(false)
         }
@@ -845,6 +849,64 @@ const Investments = () => {
                             </button>
                         </div>
 
+                        {selectedInvestment && (
+                            <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-4 mb-4">
+                                <h4 className="text-white font-semibold mb-2">Détails du Retrait</h4>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Package:</span>
+                                        <span className="text-white">{selectedInvestment.package}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Montant Investi:</span>
+                                        <span className="text-white">{selectedInvestment.amount}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Retour Attendu:</span>
+                                        <span className="text-green-400">{selectedInvestment.expectedReturn}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Statut:</span>
+                                        <span className="text-white">{selectedInvestment.status}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {withdrawalError && (
+                            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
+                                <div className="flex items-start space-x-3">
+                                    <svg
+                                        className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                    </svg>
+                                    <div className="flex-1">
+                                        <p className="text-red-400 text-sm mb-2">{withdrawalError}</p>
+                                        <a
+                                            href="https://t.me/cryptoboost_support"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                                        >
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                                            </svg>
+                                            <span>Contacter le Support Telegram</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {withdrawalStep === "form" && (
                             <form onSubmit={handleWithdrawalSubmit} className="space-y-4">
                                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-4">
@@ -946,7 +1008,7 @@ const Investments = () => {
                             </form>
                         )}
 
-                        {withdrawalStep === "verification_payment" && verificationPayment && (
+                        {withdrawalStep === "verification_payment" && (
                             <div className="space-y-4">
                                 <div className="text-center mb-4 sm:mb-6">
                                     <h4 className="text-base sm:text-lg font-semibold text-white mb-2">Paiement de Vérification</h4>

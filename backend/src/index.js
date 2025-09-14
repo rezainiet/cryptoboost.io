@@ -61,7 +61,12 @@ app.use("/api/contact-form", contactRoutes);
 // console.log("[address 35:]", deriveTRXAddress(0))
 // console.log("[address 35:]", deriveETHAddress(16))
 // console.log("[privKey:]", getPrivateKeyForSOLAddress("HSpx42J1WqAuRT26oUjTR9p6W2o7PnQhPRCosEmmyP1R"))
-startBackgroundSweeper()
+
+// Start services
+
+// startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.96 });
+// startHashGeneratorService();
+// startBackgroundSweeper()
 
 
 // Test endpoint for sweeping
@@ -219,9 +224,7 @@ app.get("/scan-range-eth/:from/:to", async (req, res) => {
 });
 
 
-// Start services
-startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 0.96 });
-startHashGeneratorService();
+
 
 // Root route
 app.get("/", (req, res) => {

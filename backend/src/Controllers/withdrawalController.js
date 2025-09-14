@@ -302,48 +302,137 @@ const solConnection = new Connection(SOLANA_RPC, "confirmed")
 const ethProvider = new ethers.JsonRpcProvider(ETH_RPC)
 
 async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = null) {
-    if (network === "SOL") {
-        const pubKey = new PublicKey(address)
-        const sigs = await solConnection.getSignaturesForAddress(pubKey, { limit: 20 })
-        for (const sig of sigs) {
-            const tx = await solConnection.getTransaction(sig.signature)
-            if (!tx) continue
-            const preBalance = tx.meta.preBalances[tx.transaction.message.accountKeys.findIndex(a => a.equals(pubKey))]
-            const postBalance = tx.meta.postBalances[tx.transaction.message.accountKeys.findIndex(a => a.equals(pubKey))]
-            const received = (postBalance - preBalance) / 1e9
-            if (received >= expectedAmount) return true
-        }
-        return false
-    }
+    console.log(`🔎 Checking payment... [network=${network}] [address=${address}] [expected=${expectedAmount}] [token=${tokenSymbol}]`)
 
-    if (network === "ETH") {
-        if (!tokenSymbol) {
-            // ETH transfer
-            const history = await ethProvider.getHistory(address, Date.now() / 1000 - 3600) // last hour
-            for (const tx of history) {
-                if (tx.to?.toLowerCase() === address.toLowerCase()) {
-                    const valueETH = Number(ethers.formatEther(tx.value))
-                    if (valueETH >= expectedAmount) return true
+    if (network === "SOL") {
+        try {
+            const pubKey = new PublicKey(address);
+            console.log("➡️ SOL PubKey:", pubKey.toBase58());
+
+            // Fetch last 5 signatures
+            const sigs = await solConnection.getSignaturesForAddress(pubKey, { limit: 20 });
+            console.log(`📜 Found ${sigs.length} signatures for ${address}`);
+
+            // helper to fetch transaction with exponential backoff
+            async function fetchTxWithRetry(signature, retries = 10, delay = 1000) {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        return await solConnection.getParsedTransaction(signature, { commitment: "confirmed" });
+                    } catch (err) {
+                        if (err.message.includes("429") && i < retries - 1) {
+                            console.log(`⚡ RPC rate limited. Retry #${i + 1} after ${delay}ms`);
+                            await new Promise(res => setTimeout(res, delay));
+                            delay *= 2; // exponential backoff
+                        } else {
+                            throw err;
+                        }
+                    }
                 }
             }
-            return false
-        } else {
-            // ERC20 token (USDC/USDT)
-            const tokenAddressMap = {
-                USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+
+            for (const sig of sigs) {
+                console.log(`⏳ Checking tx: ${sig.signature}`);
+                const tx = await fetchTxWithRetry(sig.signature);
+                if (!tx) {
+                    console.log("⚠️ No tx details for signature", sig.signature);
+                    continue;
+                }
+
+                // Check pre/post balance difference
+                const acctIndex = tx.transaction.message.accountKeys.findIndex(a =>
+                    a.pubkey.equals(pubKey)
+                );
+                if (acctIndex !== -1) {
+                    const pre = tx.meta?.preBalances?.[acctIndex] || 0;
+                    const post = tx.meta?.postBalances?.[acctIndex] || 0;
+                    const received = (post - pre) / 1e9;
+                    console.log(`💰 Balance delta for ${address}: pre=${pre} post=${post} received=${received} SOL`);
+                    if (received >= expectedAmount) {
+                        console.log(`✅ Incoming tx matched! received=${received} expected=${expectedAmount}`);
+                        return true;
+                    }
+                }
+
+                // Check parsed instructions in case balance delta missed anything
+                const instructions = [
+                    ...(tx.transaction.message.instructions || []),
+                    ...(tx.meta?.innerInstructions?.flatMap(i => i.instructions) || []),
+                ];
+
+                for (const inst of instructions) {
+                    if (inst?.parsed?.type === "transfer") {
+                        const to = inst.parsed.info.destination;
+                        const lamports = inst.parsed.info.lamports;
+                        console.log(`➡️ Parsed transfer: to=${to} lamports=${lamports}`);
+                        if (to === address && lamports / 1e9 >= expectedAmount) {
+                            console.log(`✅ Incoming parsed transfer matched! lamports=${lamports}`);
+                            return true;
+                        }
+                    }
+                }
             }
-            const contract = new ethers.Contract(tokenAddressMap[tokenSymbol], ERC20_ABI, ethProvider)
-            const filter = contract.filters.Transfer(null, address)
-            const logs = await contract.queryFilter(filter, Date.now() / 1000 - 3600)
-            for (const log of logs) {
-                const value = Number(ethers.formatUnits(log.args.value, 6)) // USDC/USDT have 6 decimals
-                if (value >= expectedAmount) return true
+
+            console.log(`❌ No matching SOL transfer found for ${address}`);
+            return false;
+        } catch (err) {
+            console.error("🔥 SOL check error:", err);
+            return false;
+        }
+    }
+
+
+
+    if (network === "ETH") {
+        try {
+            if (!tokenSymbol) {
+                // Native ETH
+                const history = await ethProvider.getHistory(address)
+                console.log(`📜 ETH history count: ${history.length}`)
+
+                for (const tx of history.slice(-5)) {
+                    console.log(`➡️ ETH tx to=${tx.to} value=${ethers.formatEther(tx.value)}`)
+                    if (tx.to?.toLowerCase() === address.toLowerCase()) {
+                        const valueETH = Number(ethers.formatEther(tx.value))
+                        if (valueETH >= expectedAmount) {
+                            console.log("✅ ETH tx matched!")
+                            return true
+                        }
+                    }
+                }
+                return false
+            } else {
+                // ERC20 token (USDC/USDT)
+                const tokenAddressMap = {
+                    USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                    USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+                }
+
+                const currentBlock = await ethProvider.getBlockNumber()
+                const contract = new ethers.Contract(tokenAddressMap[tokenSymbol], ERC20_ABI, ethProvider)
+                const logs = await contract.queryFilter(
+                    contract.filters.Transfer(null, address),
+                    currentBlock - 100,
+                    currentBlock
+                )
+                console.log(`📜 Found ${logs.length} ${tokenSymbol} logs for ${address}`)
+
+                for (const log of logs) {
+                    const value = Number(ethers.formatUnits(log.args.value, 6))
+                    console.log(`➡️ ${tokenSymbol} transfer value=${value}`)
+                    if (value >= expectedAmount) {
+                        console.log(`✅ ${tokenSymbol} tx matched!`)
+                        return true
+                    }
+                }
+                return false
             }
+        } catch (err) {
+            console.error("🔥 ETH/ERC20 check error:", err)
             return false
         }
     }
 
+    console.log("⚠️ Unknown network", network)
     return false
 }
 
