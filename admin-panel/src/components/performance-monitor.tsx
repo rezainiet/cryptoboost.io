@@ -13,7 +13,7 @@ const PerformanceMonitor = ({ performanceStats }) => {
         try {
             setLoading(true)
             const response = await fetch(
-                `https://api.cryptoboost.capital/admin/activity-logs?page=1&limit=10&userEmail=${user?.email || ""}`,
+                `http://localhost:9000/admin/activity-logs?page=1&limit=10&userEmail=${user?.email || ""}`,
                 {
                     method: "GET",
                     headers: {

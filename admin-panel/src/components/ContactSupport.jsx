@@ -82,7 +82,7 @@ const ContactSupport = () => {
                 if (status !== "all") params.append("status", status)
 
                 const response = await fetch(
-                    `https://api.cryptoboost.capital/api/contact-form/admin/form-submissions?${params.toString()}`,
+                    `http://localhost:9000/api/contact-form/admin/form-submissions?${params.toString()}`,
                     { signal: controller.signal },
                 )
                 const data = await response.json()
@@ -107,7 +107,7 @@ const ContactSupport = () => {
     const updateStatus = useCallback(
         async (id, newStatus) => {
             try {
-                const response = await fetch(`https://api.cryptoboost.capital/api/contact-form/admin/form-submissions/${id}`, {
+                const response = await fetch(`http://localhost:9000/api/contact-form/admin/form-submissions/${id}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ status: newStatus }),

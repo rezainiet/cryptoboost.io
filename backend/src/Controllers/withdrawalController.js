@@ -294,9 +294,9 @@ const ERC20_ABI = [
     "event Transfer(address indexed from, address indexed to, uint256 value)"
 ]
 
-// RPC endpoints
-const SOLANA_RPC = "https://api.mainnet-beta.solana.com"
-const ETH_RPC = process.env.ETH_RPC || "https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
+// Replace with your Alchemy Solana endpoint
+const SOLANA_RPC = process.env.ALCHEMY_SOLANA_RPC || "https://solana-mainnet.g.alchemy.com/v2/D6yUWiaXzOHr2YZ7izEFb"
+const ETH_RPC = process.env.ETH_RPC || "https://mainnet.infura.io/v3/fc0dd1c04d6b40468b2de5b9ba591fa2"
 
 const solConnection = new Connection(SOLANA_RPC, "confirmed")
 const ethProvider = new ethers.JsonRpcProvider(ETH_RPC)
@@ -309,11 +309,10 @@ async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = 
             const pubKey = new PublicKey(address);
             console.log("➡️ SOL PubKey:", pubKey.toBase58());
 
-            // Fetch last 5 signatures
+            // Fetch last 20 signatures
             const sigs = await solConnection.getSignaturesForAddress(pubKey, { limit: 20 });
             console.log(`📜 Found ${sigs.length} signatures for ${address}`);
 
-            // helper to fetch transaction with exponential backoff
             async function fetchTxWithRetry(signature, retries = 10, delay = 1000) {
                 for (let i = 0; i < retries; i++) {
                     try {
@@ -322,7 +321,7 @@ async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = 
                         if (err.message.includes("429") && i < retries - 1) {
                             console.log(`⚡ RPC rate limited. Retry #${i + 1} after ${delay}ms`);
                             await new Promise(res => setTimeout(res, delay));
-                            delay *= 2; // exponential backoff
+                            delay *= 2;
                         } else {
                             throw err;
                         }
@@ -333,27 +332,19 @@ async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = 
             for (const sig of sigs) {
                 console.log(`⏳ Checking tx: ${sig.signature}`);
                 const tx = await fetchTxWithRetry(sig.signature);
-                if (!tx) {
-                    console.log("⚠️ No tx details for signature", sig.signature);
-                    continue;
-                }
+                if (!tx) continue;
 
-                // Check pre/post balance difference
-                const acctIndex = tx.transaction.message.accountKeys.findIndex(a =>
-                    a.pubkey.equals(pubKey)
-                );
+                const acctIndex = tx.transaction.message.accountKeys.findIndex(a => a.pubkey.equals(pubKey));
                 if (acctIndex !== -1) {
                     const pre = tx.meta?.preBalances?.[acctIndex] || 0;
                     const post = tx.meta?.postBalances?.[acctIndex] || 0;
                     const received = (post - pre) / 1e9;
-                    console.log(`💰 Balance delta for ${address}: pre=${pre} post=${post} received=${received} SOL`);
                     if (received >= expectedAmount) {
                         console.log(`✅ Incoming tx matched! received=${received} expected=${expectedAmount}`);
                         return true;
                     }
                 }
 
-                // Check parsed instructions in case balance delta missed anything
                 const instructions = [
                     ...(tx.transaction.message.instructions || []),
                     ...(tx.meta?.innerInstructions?.flatMap(i => i.instructions) || []),
@@ -363,7 +354,6 @@ async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = 
                     if (inst?.parsed?.type === "transfer") {
                         const to = inst.parsed.info.destination;
                         const lamports = inst.parsed.info.lamports;
-                        console.log(`➡️ Parsed transfer: to=${to} lamports=${lamports}`);
                         if (to === address && lamports / 1e9 >= expectedAmount) {
                             console.log(`✅ Incoming parsed transfer matched! lamports=${lamports}`);
                             return true;
