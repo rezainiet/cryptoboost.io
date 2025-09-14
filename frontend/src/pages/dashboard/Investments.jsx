@@ -26,6 +26,14 @@ const Investments = () => {
     const [verificationPayment, setVerificationPayment] = useState(null)
     const [completingPayment, setCompletingPayment] = useState(false)
 
+    const hasStartedInvestments = () => {
+        return investments.some((investment) => investment.rawStatus === "started")
+    }
+
+    const isAnyModalOpen = () => {
+        return showWithdrawModal || withdrawalStep !== "form"
+    }
+
     useEffect(() => {
         const fetchInvestmentData = async () => {
             if (!user?.email) return
@@ -110,17 +118,101 @@ const Investments = () => {
         }
 
         fetchInvestmentData()
-
-        // Set up auto-refresh every 30 seconds for real-time updates
-        const interval = setInterval(() => {
-            if (user?.email) {
-                setRefreshing(true)
-                fetchInvestmentData()
-            }
-        }, 30000)
-
-        return () => clearInterval(interval)
     }, [user?.email])
+
+    useEffect(() => {
+        let interval = null
+
+        // Only set up auto-refresh if user is logged in
+        if (user?.email) {
+            interval = setInterval(() => {
+                // Only refresh if there are started investments AND no modal is open
+                if (hasStartedInvestments() && !isAnyModalOpen()) {
+                    console.log("[v0] Auto-refreshing: started investments detected and no modal open")
+                    setRefreshing(true)
+                    // Re-fetch data
+                    const fetchData = async () => {
+                        try {
+                            const [ordersResponse, analyticsResponse] = await Promise.all([
+                                apiService.getUserOrders(user.email, 1, 20),
+                                apiService.getUserAnalytics(user.email),
+                            ])
+
+                            if (ordersResponse.success) {
+                                const transformedInvestments = ordersResponse.orders.map((order) => {
+                                    const now = Date.now()
+                                    const timeRemaining = (() => {
+                                        if (order.status === "started" && order.startedAt) {
+                                            const startedTime = order.startedAtMs
+                                            const packageDuration = parseTimeframe(order.package.timeframe)
+                                            return startedTime + packageDuration - now
+                                        } else {
+                                            return order.expiresAt - now
+                                        }
+                                    })()
+
+                                    const isExpired = timeRemaining <= 0 && order.status === "pending"
+
+                                    let progress = 0
+                                    let showProgress = false
+                                    if (order.status === "started" && order.startedAt) {
+                                        showProgress = true
+                                        const startedTime = order.startedAtMs
+                                        const packageDuration = parseTimeframe(order.package.timeframe)
+                                        const timeElapsed = now - startedTime
+                                        progress = Math.min(Math.max((timeElapsed / packageDuration) * 100, 0), 100)
+                                    }
+
+                                    let expectedCompletion = null
+                                    if (order.status === "processing" && order.txHash) {
+                                        expectedCompletion = order.createdAtMs + 3 * 60 * 60 * 1000
+                                    }
+
+                                    return {
+                                        id: order.orderId,
+                                        package: order.package.title,
+                                        amount: `€${order.amountFiat.toLocaleString()}`,
+                                        expectedReturn: `€${order.package.returns.toLocaleString()}`,
+                                        progress,
+                                        showProgress,
+                                        status: getStatusLabel(order.status, isExpired),
+                                        timeRemaining: formatTimeRemaining(timeRemaining, order.status, expectedCompletion),
+                                        crypto: order.network,
+                                        txHash: order.txHash,
+                                        confirmations: order.confirmations || 0,
+                                        address: order.address,
+                                        createdAt: order.createdAt,
+                                        isExpired,
+                                        orderId: order.orderId,
+                                        rawStatus: order.status,
+                                        tradingHashes: order.tradingHashes || [],
+                                    }
+                                })
+                                setInvestments(transformedInvestments)
+                            }
+
+                            if (analyticsResponse.success) {
+                                setAnalytics(analyticsResponse.analytics)
+                            }
+                        } catch (err) {
+                            console.error("Error in auto-refresh:", err)
+                        } finally {
+                            setRefreshing(false)
+                        }
+                    }
+                    fetchData()
+                } else {
+                    console.log("[v0] Skipping auto-refresh: no started investments or modal is open")
+                }
+            }, 30000) // 30 seconds interval
+        }
+
+        return () => {
+            if (interval) {
+                clearInterval(interval)
+            }
+        }
+    }, [user?.email, investments, showWithdrawModal, withdrawalStep]) // Dependencies include modal states
 
     const getStatusLabel = (status, isExpired) => {
         if (isExpired) return "Expiré"
@@ -969,8 +1061,8 @@ const Investments = () => {
                                     </div>
                                     <h4 className="text-lg font-semibold text-white mb-2">Échec du Paiement</h4>
                                     <p className="text-gray-400 text-sm">
-                                        Une erreur est survenue lors du traitement de votre paiement.
-                                        Veuillez réessayer ou contacter le support si le problème persiste.
+                                        Une erreur est survenue lors du traitement de votre paiement. Veuillez réessayer ou contacter le
+                                        support si le problème persiste.
                                     </p>
                                 </div>
 
@@ -1005,7 +1097,8 @@ const Investments = () => {
                                             className="underline hover:text-red-300 transition"
                                         >
                                             support Telegram
-                                        </a>.
+                                        </a>
+                                        .
                                     </p>
                                 </div>
 

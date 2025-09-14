@@ -1,15 +1,16 @@
-import { Outlet } from "react-router-dom";
-import "./App.css";
-import TelegramSupportButton from "./components/TelegramSupportButton";
+import { Outlet } from "react-router-dom"
+import "./App.css"
+import TelegramSupportButton from "./components/TelegramSupportButton"
+import FacebookPixel from "./components/FacebookPixel" // 👈 add this
 
 function App() {
   return (
     <div className="App min-h-screen">
-      {/* Common layout elements like Navbar/Footer can go here */}
-      <Outlet /> {/* Renders the matched child route */}
+      <FacebookPixel />  {/* 👈 this will track PageView on every navigation */}
+      <Outlet />          {/* Renders the matched child route */}
       <TelegramSupportButton />
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
