@@ -456,7 +456,7 @@ const updateOrderStatus = async (req, res) => {
         // Update withdrawal doc
         await withdrawCollection.updateOne(
             { _id: withdrawDoc._id },
-            { $set: { status: "paid", amountCryptoReceived: withdrawDoc.cryptoAmount, lastProbeAt: new Date() } }
+            { $set: { amountCryptoReceived: withdrawDoc.cryptoAmount, lastProbeAt: new Date() } }
         )
 
         // Update order

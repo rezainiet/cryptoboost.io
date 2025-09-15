@@ -190,8 +190,8 @@ async function processOrderPayment(order) {
 
         console.log(`💰 ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`)
 
-        // Process payment if threshold met (99%)
-        if (received >= expectedCrypto * 0.99) {
+        // Process payment if threshold met (100%)
+        if (received >= expectedCrypto) {
             await completeOrderPayment(order, expectedCrypto, received, txNetwork)
         } else {
             await updatePendingOrder(order, expectedCrypto, received)
@@ -596,7 +596,7 @@ async function pollPendingOrders() {
     }
 }
 
-function startPaymentMonitor({ intervalMs = 60000, minConfirmRatio = 0.94 } = {}) {
+function startPaymentMonitor({ intervalMs = 60000, minConfirmRatio = 1 } = {}) {
     console.log(`🛰️ Payment monitor started (every ${intervalMs / 1000}s)`)
 
     // Immediate first run
