@@ -23,7 +23,7 @@ const UserManagement = () => {
         try {
             setLoading(true)
             const response = await fetch(
-                `http://localhost:9000/api/admin/users?page=${currentPage}&limit=${itemsPerPage}&search=${searchTerm}`,
+                `https://api.cryptoboost.network/api/admin/users?page=${currentPage}&limit=${itemsPerPage}&search=${searchTerm}`,
                 {
                     method: "POST",
                     headers: {
