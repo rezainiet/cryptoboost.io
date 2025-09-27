@@ -5,14 +5,66 @@ const priceService = require("../services/priceService")
 
 const createVerificationPayment = async (req, res) => {
     try {
-        const { orderId, withdrawalAmount, verificationAmount, network, walletAddress, userEmail } = req.body
+        const {
+            orderId,
+            withdrawalAmount,
+            network,
+            verificationNetwork, // Added separate network for verification payment
+            walletAddress,
+            userEmail,
+            withdrawalMethod, // 'crypto' or 'bank'
+            bankDetails, // Accept bankDetails as nested object instead of separate fields
+        } = req.body
 
-        if (!orderId || !withdrawalAmount || !verificationAmount || !network || !walletAddress || !userEmail) {
+        if (!orderId || !withdrawalAmount || !userEmail || !withdrawalMethod) {
             return res.status(400).json({
                 success: false,
                 error: "Missing required fields",
             })
         }
+
+        if (!["crypto", "bank"].includes(withdrawalMethod)) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid withdrawal method. Must be 'crypto' or 'bank'",
+            })
+        }
+
+        if (withdrawalMethod === "crypto") {
+            if (!network || !walletAddress || !verificationNetwork) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Network, wallet address, and verification network are required for crypto withdrawals",
+                })
+            }
+
+            const validVerificationNetworks = ["SOL", "ETH", "USDC", "USDT"]
+            if (!validVerificationNetworks.includes(verificationNetwork)) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid verification network. Must be one of: SOL, ETH, USDC, USDT",
+                })
+            }
+        }
+
+        if (withdrawalMethod === "bank") {
+            if (!bankDetails || !bankDetails.firstName || !bankDetails.lastName || !bankDetails.iban) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Bank details (firstName, lastName, iban) are required for bank account withdrawals",
+                })
+            }
+
+            if (!verificationNetwork) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Verification network is required for fee payment",
+                })
+            }
+        }
+
+        const verificationFeePercentage = withdrawalMethod === "crypto" ? 0.03 : 0.08 // 3% for crypto, 8% for bank
+        const verificationAmount = withdrawalAmount * verificationFeePercentage
 
         const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection()
 
@@ -26,8 +78,10 @@ const createVerificationPayment = async (req, res) => {
                     verificationPaymentId: existingPayment.verificationPaymentId,
                     address: existingPayment.address,
                     cryptoAmount: existingPayment.cryptoAmount,
-                    network: existingPayment.network,
+                    network: existingPayment.verificationNetwork, // Use verification network
                     expiresAt: existingPayment.expiresAt,
+                    withdrawalMethod: existingPayment.withdrawalMethod,
+                    verificationFeePercentage: existingPayment.verificationFeePercentage,
                 },
                 message: "Verification payment already exists for this order",
             })
@@ -36,12 +90,15 @@ const createVerificationPayment = async (req, res) => {
         // 🔑 2. If not found, create a new verification payment
         const verificationPaymentId = uuidv4()
 
-        // Generate payment address for verification
-        const addressData = await hdWallet.deriveAddressByNetwork(network);
+        let addressData = null
+        let cryptoAmount = null
+
+        // Generate payment address for verification using the verification network
+        addressData = await hdWallet.deriveAddressByNetwork(verificationNetwork)
         console.log(addressData)
         console.log("[v0] Address data from hdWallet:", JSON.stringify(addressData, null, 2))
 
-        const cryptoAmount = await priceService.getPriceInCrypto(verificationAmount, network, "eur") // force EUR
+        cryptoAmount = await priceService.getPriceInCrypto(verificationAmount, verificationNetwork, "eur") // force EUR
 
         const verificationPaymentDoc = {
             verificationPaymentId,
@@ -49,32 +106,47 @@ const createVerificationPayment = async (req, res) => {
             userEmail,
             withdrawalAmount,
             verificationAmount,
-            cryptoAmount,
-            network,
-            walletAddress,
-            address: addressData.address,
-            derivationPath: addressData.path,
-            addressIndex: addressData.index,
+            verificationFeePercentage,
+            withdrawalMethod,
+            verificationNetwork, // Store verification network separately
             status: "pending",
             type: "verification_payment",
             createdAt: new Date().toISOString(),
             createdAtMs: Date.now(),
             expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
+            cryptoAmount: cryptoAmount,
+            address: addressData.address,
+            derivationPath: addressData.path,
+            addressIndex: addressData.index,
+        }
+
+        if (withdrawalMethod === "crypto") {
+            verificationPaymentDoc.network = network
+            verificationPaymentDoc.walletAddress = walletAddress
+        }
+
+        if (withdrawalMethod === "bank") {
+            verificationPaymentDoc.bankDetails = bankDetails
         }
 
         console.log("[v0] New verification payment document:", JSON.stringify(verificationPaymentDoc, null, 2))
 
         await withdrawChargePaymentCollection.insertOne(verificationPaymentDoc)
 
+        const responsePayment = {
+            verificationPaymentId,
+            withdrawalMethod,
+            verificationFeePercentage,
+            verificationAmount,
+            expiresAt: verificationPaymentDoc.expiresAt,
+            address: addressData.address,
+            cryptoAmount: cryptoAmount,
+            network: verificationNetwork, // Return verification network
+        }
+
         res.json({
             success: true,
-            payment: {
-                verificationPaymentId,
-                address: addressData.address,
-                cryptoAmount,
-                network,
-                expiresAt: verificationPaymentDoc.expiresAt,
-            },
+            payment: responsePayment,
             message: "New verification payment created",
         })
     } catch (error) {
@@ -85,6 +157,8 @@ const createVerificationPayment = async (req, res) => {
         })
     }
 }
+
+
 
 
 const createWithdrawalAfterVerification = async (req, res) => {

