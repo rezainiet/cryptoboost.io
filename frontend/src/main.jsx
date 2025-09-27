@@ -20,6 +20,26 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx"
 import FAQPage from "./pages/FAQPage.jsx"
 import TestimonialsPage from "./pages/TestimonialsPage"
 
+
+// src/main.jsx (top of file)
+const APP_VERSION = "2.0.0";
+const STORAGE_KEY = "app_version";
+
+try {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored !== APP_VERSION) {
+    localStorage.setItem(STORAGE_KEY, APP_VERSION);
+    const url = new URL(window.location.href);
+    url.searchParams.set("_v", Date.now().toString());
+    window.location.replace(url.toString());
+    // don't continue rendering — page will reload
+  }
+} catch (e) {
+  console.warn("version check failed", e);
+}
+
+
+
 // Define the router with nested routes
 const router = createBrowserRouter([
   {
@@ -64,6 +84,8 @@ const router = createBrowserRouter([
     ],
   },
 ])
+
+
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

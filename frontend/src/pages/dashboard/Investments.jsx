@@ -673,14 +673,14 @@ const Investments = () => {
                                     <div className="text-left sm:text-right flex-shrink-0">
                                         <span
                                             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold border shadow-lg inline-block ${investment.status === "Bot actif"
-                                                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/20"
-                                                    : investment.status === "Terminé"
-                                                        ? "bg-green-500/20 text-green-400 border-green-500/30 shadow-green-500/20"
-                                                        : investment.status === "En cours"
-                                                            ? "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-blue-500/20"
-                                                            : investment.status === "Expiré"
-                                                                ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20"
-                                                                : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-yellow-500/20"
+                                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/20"
+                                                : investment.status === "Terminé"
+                                                    ? "bg-green-500/20 text-green-400 border-green-500/30 shadow-green-500/20"
+                                                    : investment.status === "En cours"
+                                                        ? "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-blue-500/20"
+                                                        : investment.status === "Expiré"
+                                                            ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20"
+                                                            : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-yellow-500/20"
                                                 }`}
                                         >
                                             {investment.status}
@@ -963,8 +963,8 @@ const Investments = () => {
                                                 setWithdrawalData({ ...withdrawalData, method: "crypto" })
                                             }}
                                             className={`p-4 rounded-xl border-2 transition-all duration-300 ${withdrawalData.method === "crypto"
-                                                    ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                                    : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                                ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                                : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                                 }`}
                                         >
                                             <div className="text-center">
@@ -987,8 +987,8 @@ const Investments = () => {
                                                 setWithdrawalData({ ...withdrawalData, method: "bank" })
                                             }}
                                             className={`p-4 rounded-xl border-2 transition-all duration-300 ${withdrawalData.method === "bank"
-                                                    ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                                    : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                                ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                                : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                                 }`}
                                         >
                                             <div className="text-center">
@@ -1055,6 +1055,20 @@ const Investments = () => {
                                                 required
                                             />
                                         </div>
+                                        {
+                                            selectedInvestment && <div>
+                                                <label className="block text-gray-300 text-sm font-medium mb-2">Montant à retirer:</label>
+                                                <input
+                                                    type="text"
+                                                    disabled
+                                                    value={selectedInvestment?.expectedReturn}
+                                                    onChange={(e) => setWithdrawalData({ ...withdrawalData, walletAddress: e.target.value })}
+                                                    className="w-full bg-slate-900/100 border border-slate-600/50 rounded-xl px-4 py-3 text-gray-400 focus:border-teal-500/50 focus:outline-none transition-colors"
+                                                    placeholder="Amount"
+                                                    required
+                                                />
+                                            </div>
+                                        }
                                     </>
                                 )}
 
