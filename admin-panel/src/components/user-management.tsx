@@ -62,6 +62,7 @@ const UserManagement = () => {
         const headers = [
             "Name",
             "Email",
+            "Telegram",
             "Phone",
             "Role",
             "Total Invested",
@@ -76,6 +77,7 @@ const UserManagement = () => {
                 [
                     `"${user.name || "Unknown"}"`,
                     `"${user.email || ""}"`,
+                    `"${user.telegram || ""}"`,
                     `"${user.phone || "No phone"}"`,
                     `"${user.role || "user"}"`,
                     `"${user.totalInvested?.toLocaleString() || "0"}"`,
@@ -182,6 +184,7 @@ const UserManagement = () => {
                             <thead className="bg-slate-700/50">
                                 <tr>
                                     <th className="text-left p-4 text-slate-300 font-medium">User</th>
+                                    <th className="text-left p-4 text-slate-300 font-medium">Telegram</th>
                                     <th className="text-left p-4 text-slate-300 font-medium">Email</th>
                                     <th className="text-left p-4 text-slate-300 font-medium">Role</th>
                                     <th className="text-left p-4 text-slate-300 font-medium">Total Invested</th>
@@ -206,6 +209,21 @@ const UserManagement = () => {
                                                 </div>
                                             </div>
                                         </td>
+                                        <td className="p-4 text-slate-300">
+                                            {user.telegram ? (
+                                                <a
+                                                    href={`https://t.me/${user.telegram}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-400 hover:underline"
+                                                >
+                                                    {`@${user.telegram}`}
+                                                </a>
+                                            ) : (
+                                                "N/A"
+                                            )}
+                                        </td>
+
                                         <td className="p-4 text-slate-300">{user.email}</td>
                                         <td className="p-4">
                                             <span

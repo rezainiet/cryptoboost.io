@@ -8,6 +8,16 @@ const admin = require("../config/firebaseAdmin")
 const registerUser = async (req, res) => {
   const user = req.body
 
+  // 🔥 Get client IP safely
+  let clientIp = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress
+  if (clientIp && clientIp.includes(",")) {
+    // If multiple IPs (proxy chain), take the first one
+    clientIp = clientIp.split(",")[0].trim()
+  }
+  if (clientIp && clientIp.startsWith("::ffff:")) {
+    clientIp = clientIp.replace("::ffff:", "")
+  }
+
   try {
     // Check if user already exists
     const existingUser = await userCollection.findOne({ email: user.email })
@@ -26,6 +36,7 @@ const registerUser = async (req, res) => {
           name: user.name,
           email: user.email,
           phone: user.phone,
+          telegram: user.telegram,
           createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
           role,
           imageUrl: "https://cdn-icons-png.freepik.com/512/3607/3607444.png",
@@ -34,7 +45,7 @@ const registerUser = async (req, res) => {
             {
               action: "registration_completed",
               timestamp: moment().format("YYYY-MM-DD HH:mm:ss"),
-              ip: req.ip || req.connection.remoteAddress,
+              ip: clientIp,
             },
           ],
         }
@@ -63,6 +74,7 @@ const registerUser = async (req, res) => {
     const newUser = {
       name: user.name,
       email: user.email,
+      telegram: user.telegram,
       phone: user.phone,
       createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
       role,
@@ -72,7 +84,7 @@ const registerUser = async (req, res) => {
         {
           action: "user_registered",
           timestamp: moment().format("YYYY-MM-DD HH:mm:ss"),
-          ip: req.ip || req.connection.remoteAddress,
+          ip: clientIp,
         },
       ],
     }
@@ -102,6 +114,7 @@ const registerUser = async (req, res) => {
     })
   }
 }
+
 
 const loginUser = async (req, res) => {
   const { email } = req.body

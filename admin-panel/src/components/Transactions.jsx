@@ -134,7 +134,7 @@ const Transactions = () => {
                     </thead>
                     <tbody className="bg-gray-900 divide-y divide-gray-700">
                         {transactions.map((tx) => {
-                            const explorerUrl = getExplorerUrl(tx.network, tx.txHash, tx.address)
+                            const explorerUrl = getExplorerUrl(tx.network || tx.verificationNetwork, tx.sweepTxHash, tx.address)
                             return (
                                 <tr key={tx._id} className="hover:bg-gray-800">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">{tx.orderId}</td>

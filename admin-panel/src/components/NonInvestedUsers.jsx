@@ -38,13 +38,14 @@ const NonInvestedUsers = () => {
     }
 
     const generateCSV = (data, filename) => {
-        const headers = ["Name", "Email", "Registration Date", "Phone", "Status"]
+        const headers = ["Name", "Email", "Telegram", "Registration Date", "Phone", "Status"]
         const csvContent = [
             headers.join(","),
             ...data.map((user) =>
                 [
                     `"${user.name || ""}"`,
                     `"${user.email || ""}"`,
+                    `"${user.telegram || ""}"`,
                     `"${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}"`,
                     `"${user.phone || "N/A"}"`,
                     `"Potential Investor"`,
@@ -145,6 +146,9 @@ const NonInvestedUsers = () => {
                                 User
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Telegram
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Registration Date
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -171,9 +175,21 @@ const NonInvestedUsers = () => {
                                             <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                        {user?.telegram ? (
+                                            <a
+                                                href={`https://t.me/${user.telegram}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-500 hover:underline"
+                                            >
+                                                @{user.telegram}
+                                            </a>
+                                        ) : (
+                                            "N/A"
+                                        )}
                                     </td>
+
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{user?.phone || "N/A"}</div>
                                     </td>

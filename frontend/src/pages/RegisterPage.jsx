@@ -15,6 +15,7 @@ export default function RegisterPage() {
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
+        telegramUserName: "",
         email: "",
         phone: "",
         password: "",
@@ -70,6 +71,9 @@ export default function RegisterPage() {
         if (!formData.lastName.trim()) {
             newErrors.lastName = "Le nom est requis"
         }
+        if (!formData.telegramUserName.trim()) {
+            newErrors.telegramUserName = "Le Nom d'utilisateur du télégramme est requis"
+        }
 
         if (!formData.phone.trim()) {
             newErrors.phone = "Le numéro de téléphone est requis"
@@ -108,6 +112,7 @@ export default function RegisterPage() {
             try {
                 const userData = {
                     name: `${formData.firstName} ${formData.lastName}`,
+                    telegram: formData.telegramUserName,
                     email: formData.email,
                     phone: formData.phone,
                     password: formData.password,
@@ -126,6 +131,7 @@ export default function RegisterPage() {
                     setFormData({
                         firstName: "",
                         lastName: "",
+                        telegramUserName: "",
                         email: "",
                         phone: "",
                         password: "",
@@ -277,6 +283,23 @@ export default function RegisterPage() {
                             </div>
                         </div>
 
+                        <div>
+                            <label htmlFor="telegramUserName" className="block text-sm font-medium text-gray-700 mb-2">
+                                Nom d'utilisateur du télégramme *
+                            </label>
+                            <input
+                                type="text"
+                                id="telegramUserName"
+                                name="telegramUserName"
+                                value={formData.telegramUserName}
+                                onChange={handleChange}
+                                required
+                                className={`w-full px-4 py-3 sm:py-4 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm text-base ${errors.email ? "border-red-300" : "border-gray-200"
+                                    }`}
+                                placeholder="jean.dupont@email.com"
+                            />
+                            {errors.telegramUserName && <p className="text-red-500 text-xs mt-1">{errors.telegramUserName}</p>}
+                        </div>
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                                 Adresse email *

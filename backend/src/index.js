@@ -33,6 +33,7 @@ const TOKEN_ADDRESSES = {
 const app = express();
 const port = process.env.PORT || 9000;
 
+app.set("trust proxy", true)
 // Middleware
 app.use(cors({
   origin: function (origin, callback) {
@@ -56,11 +57,6 @@ app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/contact-form", contactRoutes);
 
-
-
-// console.log("[address 35:]", deriveTRXAddress(0))
-// console.log("[address 35:]", deriveETHAddress(16))
-// console.log("[privKey:]", getPrivateKeyForSOLAddress("HSpx42J1WqAuRT26oUjTR9p6W2o7PnQhPRCosEmmyP1R"))
 
 // Start services
 
