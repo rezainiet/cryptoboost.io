@@ -314,6 +314,12 @@ const Investments = () => {
             const verificationFeeRate = withdrawalData.method === "crypto" ? 0.03 : 0.08
             const verificationAmount = withdrawalAmount * verificationFeeRate
 
+            console.log("[v0] Withdrawal method:", withdrawalData.method)
+            console.log("[v0] Verification fee rate:", verificationFeeRate)
+            console.log("[v0] Withdrawal amount:", withdrawalAmount)
+            console.log("[v0] Verification amount:", verificationAmount)
+            console.log("[v0] Full withdrawal data:", withdrawalData)
+
             const verificationResponse = await apiService.createVerificationPayment({
                 orderId: selectedInvestment.orderId,
                 withdrawalAmount,
@@ -333,6 +339,8 @@ const Investments = () => {
                         : null,
                 userEmail: user.email,
             })
+
+            console.log("[v0] API response:", verificationResponse)
 
             if (verificationResponse.success) {
                 setVerificationPayment(verificationResponse.payment)
@@ -665,14 +673,14 @@ const Investments = () => {
                                     <div className="text-left sm:text-right flex-shrink-0">
                                         <span
                                             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold border shadow-lg inline-block ${investment.status === "Bot actif"
-                                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/20"
-                                                : investment.status === "Terminé"
-                                                    ? "bg-green-500/20 text-green-400 border-green-500/30 shadow-green-500/20"
-                                                    : investment.status === "En cours"
-                                                        ? "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-blue-500/20"
-                                                        : investment.status === "Expiré"
-                                                            ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20"
-                                                            : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-yellow-500/20"
+                                                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/20"
+                                                    : investment.status === "Terminé"
+                                                        ? "bg-green-500/20 text-green-400 border-green-500/30 shadow-green-500/20"
+                                                        : investment.status === "En cours"
+                                                            ? "bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-blue-500/20"
+                                                            : investment.status === "Expiré"
+                                                                ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20"
+                                                                : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 shadow-yellow-500/20"
                                                 }`}
                                         >
                                             {investment.status}
@@ -950,10 +958,13 @@ const Investments = () => {
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
                                             type="button"
-                                            onClick={() => setWithdrawalData({ ...withdrawalData, method: "crypto" })}
+                                            onClick={() => {
+                                                console.log("[v0] Switching to crypto method")
+                                                setWithdrawalData({ ...withdrawalData, method: "crypto" })
+                                            }}
                                             className={`p-4 rounded-xl border-2 transition-all duration-300 ${withdrawalData.method === "crypto"
-                                                ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                                : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                                    ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                                    : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                                 }`}
                                         >
                                             <div className="text-center">
@@ -971,10 +982,13 @@ const Investments = () => {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setWithdrawalData({ ...withdrawalData, method: "bank" })}
+                                            onClick={() => {
+                                                console.log("[v0] Switching to bank method")
+                                                setWithdrawalData({ ...withdrawalData, method: "bank" })
+                                            }}
                                             className={`p-4 rounded-xl border-2 transition-all duration-300 ${withdrawalData.method === "bank"
-                                                ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                                : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                                    ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                                    : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                                 }`}
                                         >
                                             <div className="text-center">
