@@ -23,6 +23,16 @@ const createVerificationPayment = async (req, res) => {
             })
         }
 
+        const order = await getOrdersCollection();
+        const orderDoc = order.findOne({ orderId });
+
+        if (orderDoc?.package?.returns !== withdrawalAmount) {
+            return res.status(400).json({
+                success: false,
+                error: "Withdrawal amount is not same as Generated amount!",
+            })
+        }
+
         if (!["crypto", "bank"].includes(withdrawalMethod)) {
             return res.status(400).json({
                 success: false,
