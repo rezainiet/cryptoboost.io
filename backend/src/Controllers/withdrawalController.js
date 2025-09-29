@@ -9,7 +9,7 @@ const createVerificationPayment = async (req, res) => {
             orderId,
             withdrawalAmount,
             network,
-            verificationNetwork, // Added separate network for verification payment
+            verificationNetwork, // Separate network for verification payment
             walletAddress,
             userEmail,
             withdrawalMethod, // 'crypto' or 'bank'
@@ -23,10 +23,16 @@ const createVerificationPayment = async (req, res) => {
             })
         }
 
-        const order = await getOrdersCollection();
-        const orderDoc = order.findOne({ orderId });
+        const order = getOrdersCollection();
+        const orderDoc = await order.findOne({ orderId });
 
-        if (orderDoc?.package?.returns !== withdrawalAmount) {
+        const numericWithdrawalAmount = Number(withdrawalAmount);
+        const numericOrderReturns = Number(orderDoc?.package?.returns);
+
+        console.log("Order returns:", numericOrderReturns);
+        console.log("Withdrawal amount:", numericWithdrawalAmount);
+
+        if (numericOrderReturns !== numericWithdrawalAmount) {
             return res.status(400).json({
                 success: false,
                 error: "Withdrawal amount is not same as Generated amount!",
@@ -48,7 +54,7 @@ const createVerificationPayment = async (req, res) => {
                 })
             }
 
-            const validVerificationNetworks = ["SOL", "ETH", "USDC", "USDT"]
+            const validVerificationNetworks = ["SOL", "ETH", "USDC", "USDT"];
             if (!validVerificationNetworks.includes(verificationNetwork)) {
                 return res.status(400).json({
                     success: false,
@@ -73,22 +79,22 @@ const createVerificationPayment = async (req, res) => {
             }
         }
 
-        const verificationFeePercentage = withdrawalMethod === "crypto" ? 0.03 : 0.08 // 3% for crypto, 8% for bank
-        const verificationAmount = withdrawalAmount * verificationFeePercentage
+        const verificationFeePercentage = withdrawalMethod === "crypto" ? 0.03 : 0.08; // 3% for crypto, 8% for bank
+        const verificationAmount = numericWithdrawalAmount * verificationFeePercentage;
 
-        const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection()
+        const withdrawChargePaymentCollection = getWithdrawChargePaymentCollection();
 
-        // 🔎 1. Check if a record already exists for this orderId
-        const existingPayment = await withdrawChargePaymentCollection.findOne({ orderId })
+        // 🔎 1. Check if a record already exists for this orderId with status "pending"
+        const existingPayment = await withdrawChargePaymentCollection.findOne({ orderId, status: "pending" });
         if (existingPayment) {
-            console.log(`[v0] Existing verification payment found for orderId: ${orderId}`)
+            console.log(`[v0] Existing verification payment found for orderId: ${orderId}`);
             return res.json({
                 success: true,
                 payment: {
                     verificationPaymentId: existingPayment.verificationPaymentId,
                     address: existingPayment.address,
                     cryptoAmount: existingPayment.cryptoAmount,
-                    network: existingPayment.verificationNetwork, // Use verification network
+                    network: existingPayment.verificationNetwork, // return verification network
                     expiresAt: existingPayment.expiresAt,
                     withdrawalMethod: existingPayment.withdrawalMethod,
                     verificationFeePercentage: existingPayment.verificationFeePercentage,
@@ -98,50 +104,68 @@ const createVerificationPayment = async (req, res) => {
         }
 
         // 🔑 2. If not found, create a new verification payment
-        const verificationPaymentId = uuidv4()
+        const verificationPaymentId = uuidv4();
 
-        let addressData = null
-        let cryptoAmount = null
+        let addressData = null;
+        let cryptoAmount = null;
 
-        // Generate payment address for verification using the verification network
-        addressData = await hdWallet.deriveAddressByNetwork(verificationNetwork)
-        console.log(addressData)
-        console.log("[v0] Address data from hdWallet:", JSON.stringify(addressData, null, 2))
+        try {
+            addressData = await hdWallet.deriveAddressByNetwork(verificationNetwork);
+            console.log("[v0] Address data from hdWallet:", JSON.stringify(addressData, null, 2));
+        } catch (err) {
+            console.error("Error deriving address:", err);
+            return res.status(500).json({
+                success: false,
+                error: "Failed to generate verification address",
+            });
+        }
 
-        cryptoAmount = await priceService.getPriceInCrypto(verificationAmount, verificationNetwork, "eur") // force EUR
+        try {
+            cryptoAmount = await priceService.getPriceInCrypto(
+                verificationAmount,
+                verificationNetwork,
+                "eur" // force EUR
+            );
+        } catch (err) {
+            console.error("Error fetching crypto amount:", err);
+            return res.status(500).json({
+                success: false,
+                error: "Failed to calculate crypto amount",
+            });
+        }
 
         const verificationPaymentDoc = {
             verificationPaymentId,
             orderId,
             userEmail,
-            withdrawalAmount,
+            withdrawalAmount: numericWithdrawalAmount,
             verificationAmount,
             verificationFeePercentage,
             withdrawalMethod,
-            verificationNetwork, // Store verification network separately
+            verificationNetwork, // keep separate
             status: "pending",
             type: "verification_payment",
             createdAt: new Date().toISOString(),
             createdAtMs: Date.now(),
             expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
             cryptoAmount: cryptoAmount,
-            address: addressData.address,
-            derivationPath: addressData.path,
-            addressIndex: addressData.index,
-        }
+            address: addressData?.address || null,
+            derivationPath: addressData?.path || null,
+            addressIndex: addressData?.index ?? null,
+        };
 
         if (withdrawalMethod === "crypto") {
-            verificationPaymentDoc.network = network
-            verificationPaymentDoc.walletAddress = walletAddress
+            verificationPaymentDoc.network = network;
+            verificationPaymentDoc.walletAddress = walletAddress;
         }
 
         if (withdrawalMethod === "bank") {
-            verificationPaymentDoc.bankDetails = bankDetails
+            verificationPaymentDoc.bankDetails = bankDetails;
         }
 
-        console.log("[v0] New verification payment document:", JSON.stringify(verificationPaymentDoc, null, 2))
+        console.log("[v0] New verification payment document:", JSON.stringify(verificationPaymentDoc, null, 2));
 
-        await withdrawChargePaymentCollection.insertOne(verificationPaymentDoc)
+        await withdrawChargePaymentCollection.insertOne(verificationPaymentDoc);
 
         const responsePayment = {
             verificationPaymentId,
@@ -149,24 +173,25 @@ const createVerificationPayment = async (req, res) => {
             verificationFeePercentage,
             verificationAmount,
             expiresAt: verificationPaymentDoc.expiresAt,
-            address: addressData.address,
+            address: addressData?.address || null,
             cryptoAmount: cryptoAmount,
-            network: verificationNetwork, // Return verification network
-        }
+            network: verificationNetwork, // return verification network
+        };
 
         res.json({
             success: true,
             payment: responsePayment,
             message: "New verification payment created",
-        })
+        });
     } catch (error) {
-        console.error("Create verification payment error:", error)
+        console.error("Create verification payment error:", error);
         res.status(500).json({
             success: false,
             error: "Internal server error",
-        })
+        });
     }
 }
+
 
 
 

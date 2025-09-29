@@ -22,7 +22,7 @@ import TestimonialsPage from "./pages/TestimonialsPage"
 
 
 // src/main.jsx (top of file)
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.3.0";
 const STORAGE_KEY = "app_version";
 
 try {
