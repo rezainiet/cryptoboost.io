@@ -23,25 +23,25 @@ class PriceService {
     }
 
     async getCryptoPrice(symbol, fiatCurrency = "usd") {
-        try {
-            const priceCache = getPriceCacheCollection()
-            const cacheKey = `${symbol.toLowerCase()}_${fiatCurrency.toLowerCase()}`
+        const priceCache = getPriceCacheCollection();
+        const cacheKey = `${symbol.toLowerCase()}_${fiatCurrency.toLowerCase()}`;
 
-            // Check cache
+        try {
+            // Check cache first
             const cachedPrice = await priceCache.findOne({
                 symbol: cacheKey,
                 timestamp: { $gt: Date.now() - this.CACHE_DURATION },
-            })
+            });
 
             if (cachedPrice) {
-                console.log(`[v0] Using cached price for ${symbol}: ${cachedPrice.price}`)
-                return cachedPrice.price
+                console.log(`[v0] Using cached price for ${symbol}: ${cachedPrice.price}`);
+                return cachedPrice.price;
             }
 
             // Fetch fresh price
-            const freshPrice = await this.fetchPriceFromAPI(symbol, fiatCurrency)
+            const freshPrice = await this.fetchPriceFromAPI(symbol, fiatCurrency);
 
-            // Cache it
+            // Cache the fresh price
             await priceCache.updateOne(
                 { symbol: cacheKey },
                 {
@@ -52,26 +52,38 @@ class PriceService {
                         lastUpdated: new Date(),
                     },
                 },
-                { upsert: true },
-            )
+                { upsert: true }
+            );
 
-            console.log(`[v0] Fetched and cached fresh price for ${symbol}: ${freshPrice}`)
-            return freshPrice
+            console.log(`[v0] Fetched and cached fresh price for ${symbol}: ${freshPrice}`);
+            return freshPrice;
         } catch (error) {
-            console.error(`[v0] Error getting crypto price for ${symbol}:`, error)
-            throw new Error(`Failed to get price for ${symbol}`)
+            console.error(`[v0] Error getting crypto price for ${symbol}:`, error.message);
+
+            // Try returning cached price even if expired
+            const cachedPrice = await priceCache.findOne({ symbol: cacheKey });
+            if (cachedPrice) {
+                console.warn(`[v0] Returning last cached price for ${symbol}: ${cachedPrice.price}`);
+                return cachedPrice.price;
+            }
+
+            throw new Error(`Failed to get price for ${symbol} and no cached price available`);
         }
     }
 
-    async fetchPriceFromAPI(symbol, fiatCurrency) {
-        const now = Date.now()
-        const timeSinceLastCall = now - this.lastApiCall
-        if (timeSinceLastCall < this.minApiDelay) {
-            await new Promise((resolve) => setTimeout(resolve, this.minApiDelay - timeSinceLastCall))
-        }
-        this.lastApiCall = Date.now()
 
-        const coinGeckoId = this.symbolMap[symbol.toUpperCase()] || symbol.toLowerCase()
+    async fetchPriceFromAPI(symbol, fiatCurrency) {
+        const priceCache = getPriceCacheCollection();
+        const cacheKey = `${symbol.toLowerCase()}_${fiatCurrency.toLowerCase()}`;
+
+        const now = Date.now();
+        const timeSinceLastCall = now - this.lastApiCall;
+        if (timeSinceLastCall < this.minApiDelay) {
+            await new Promise(resolve => setTimeout(resolve, this.minApiDelay - timeSinceLastCall));
+        }
+        this.lastApiCall = Date.now();
+
+        const coinGeckoId = this.symbolMap[symbol.toUpperCase()] || symbol.toLowerCase();
 
         try {
             const response = await axios.get(this.API_ENDPOINTS.coinGecko, {
@@ -80,44 +92,51 @@ class PriceService {
                     vs_currencies: fiatCurrency.toLowerCase(),
                 },
                 timeout: 10000,
-            })
+            });
 
-            const price = response.data[coinGeckoId]?.[fiatCurrency.toLowerCase()]
-            if (price) return Number.parseFloat(price)
-
-            throw new Error("Price not found in CoinGecko response")
+            const price = response.data[coinGeckoId]?.[fiatCurrency.toLowerCase()];
+            if (price) return Number.parseFloat(price);
+            throw new Error("Price not found in CoinGecko response");
         } catch (err) {
-            console.error(`[v0] CoinGecko failed for ${symbol}:`, err.message)
+            console.error(`[v0] CoinGecko failed for ${symbol}:`, err.message);
         }
 
         try {
-            const binanceSymbol = `${symbol.toUpperCase()}${fiatCurrency.toUpperCase()}`
+            const binanceSymbol = `${symbol.toUpperCase()}${fiatCurrency.toUpperCase()}`;
             const response = await axios.get(this.API_ENDPOINTS.binance, {
                 params: { symbol: binanceSymbol },
                 timeout: 10000,
-            })
+            });
 
             if (response.data.price) {
-                return Number.parseFloat(response.data.price)
+                return Number.parseFloat(response.data.price);
             }
         } catch (err) {
-            console.error(`[v0] Binance failed for ${symbol}:`, err.message)
+            console.error(`[v0] Binance failed for ${symbol}:`, err.message);
         }
 
         try {
             const response = await axios.get(`${this.API_ENDPOINTS.coinCap}/${coinGeckoId}`, {
                 timeout: 10000,
-            })
+            });
 
             if (response.data.data?.priceUsd && fiatCurrency.toLowerCase() === "usd") {
-                return Number.parseFloat(response.data.data.priceUsd)
+                return Number.parseFloat(response.data.data.priceUsd);
             }
         } catch (err) {
-            console.error(`[v0] CoinCap failed for ${symbol}:`, err.message)
+            console.error(`[v0] CoinCap failed for ${symbol}:`, err.message);
         }
 
-        throw new Error(`All price APIs failed for ${symbol}`)
+        // --- FALLBACK TO CACHE ---
+        const cachedPrice = await priceCache.findOne({ symbol: cacheKey });
+        if (cachedPrice) {
+            console.warn(`[v0] All APIs failed. Returning last cached price for ${symbol}: ${cachedPrice.price}`);
+            return cachedPrice.price;
+        }
+
+        throw new Error(`All price APIs failed for ${symbol} and no cached price available`);
     }
+
 
     async convertFiatToCrypto(fiatAmount, cryptoSymbol, fiatCurrency = "usd") {
         const cryptoPrice = await this.getCryptoPrice(cryptoSymbol, fiatCurrency)
