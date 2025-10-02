@@ -44,7 +44,6 @@ async function checkTRX(address) {
 }
 
 // ---- Main loop ----
-// ---- Main loop ----
 async function runPaymentChecks() {
     const ordersCol = getOrdersCollection();
 

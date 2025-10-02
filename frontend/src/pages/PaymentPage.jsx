@@ -69,12 +69,28 @@ const PaymentPage = () => {
 
     console.log(initialPkg)
 
+    // useEffect(() => {
+    //     if (!initialPkg) return
+
+    //     const baseAmount = Number(initialPkg.investment)
+    //     const vatRate = 0.05 // 5% VAT
+    //     const total = baseAmount + baseAmount * vatRate // Removed processing fee
+    //     setTotalWithFees(total)
+
+    //     if (cryptoPrices[selectedPayment] && cryptoPrices[selectedPayment] > 0) {
+    //         const cryptoValue = total / cryptoPrices[selectedPayment]
+    //         setCryptoAmount(cryptoValue)
+    //         console.log("[v0] Calculated crypto amount:", cryptoValue, "for", selectedPayment)
+    //     } else {
+    //         setCryptoAmount(0)
+    //     }
+    // }, [initialPkg, selectedPayment, cryptoPrices])
+
     useEffect(() => {
         if (!initialPkg) return
 
         const baseAmount = Number(initialPkg.investment)
-        const vatRate = 0.05 // 5% VAT
-        const total = baseAmount + baseAmount * vatRate // Removed processing fee
+        const total = baseAmount // ✅ No VAT, no fees
         setTotalWithFees(total)
 
         if (cryptoPrices[selectedPayment] && cryptoPrices[selectedPayment] > 0) {
@@ -85,6 +101,7 @@ const PaymentPage = () => {
             setCryptoAmount(0)
         }
     }, [initialPkg, selectedPayment, cryptoPrices])
+
 
     useEffect(() => {
         if (!order?.expiresAt) return

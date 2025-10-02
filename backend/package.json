@@ -31,6 +31,7 @@
     "mongodb": "^6.15.0",
     "mongoose": "^8.17.1",
     "nodemon": "^3.1.10",
+    "p-limit": "^7.1.1",
     "tiny-secp256k1": "^2.2.4",
     "tronweb": "^6.0.4",
     "tweetnacl": "^1.0.3",

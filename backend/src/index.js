@@ -76,60 +76,6 @@ app.get('/test-sweep/:network/:index', async (req, res) => {
   }
 });
 
-app.get('/debug-balance/:network/:address', async (req, res) => {
-  try {
-    const { network, address } = req.params;
-    const networkUpper = network.toUpperCase();
-
-    if (!['USDT', 'USDC', 'ETH'].includes(networkUpper)) {
-      return res.status(400).json({ error: 'Unsupported network. Use ETH, USDT, or USDC' });
-    }
-
-    const params = {
-      module: 'account',
-      address: ethers.getAddress(address), // Ensures checksum address
-      tag: 'latest',
-      apikey: process.env.ETHERSCAN_KEY
-    };
-
-    // Set API action based on network
-    params.action = networkUpper === 'ETH' ? 'balance' : 'tokenbalance';
-    if (networkUpper !== 'ETH') {
-      params.contractaddress = TOKEN_ADDRESSES[networkUpper];
-    }
-
-    const response = await axios.get(`https://api.etherscan.io/api`, { params, timeout: 5000 });
-
-    if (response.data.status !== "1") {
-      const errorMsg = response.data.message || 'Etherscan API error';
-      console.error('Etherscan error:', errorMsg);
-      return res.status(400).json({
-        error: errorMsg,
-        result: response.data.result
-      });
-    }
-
-    const divisor = networkUpper === 'ETH' ? 1e18 : 1e6;
-    const balance = (Number(response.data.result) / divisor).toFixed(6);
-
-    res.json({
-      success: true,
-      network: networkUpper,
-      address: ethers.getAddress(address),
-      balance: Number(balance),
-      unit: networkUpper,
-      source: 'etherscan'
-    });
-
-  } catch (err) {
-    console.error('Debug balance error:', err.message);
-    res.status(500).json({
-      error: err.message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
-  }
-});
-
 
 app.get("/scan-range/:from/:to", async (req, res) => {
   try {
@@ -145,80 +91,59 @@ app.get("/scan-range/:from/:to", async (req, res) => {
     for (let i = from; i <= to; i++) {
       const { address, path } = deriveBTCAddress(i);
 
-      // Call blockchain explorer API to get balance (using Blockstream API for BTC as example)
-      const response = await axios.get(
-        `https://blockstream.info/api/address/${address}`
-      );
+      try {
+        const response = await axios.get(
+          `https://blockstream.info/api/address/${address}`
+        );
 
-      const balance = response.data.chain_stats.funded_txo_sum - response.data.chain_stats.spent_txo_sum;
+        const balance =
+          response.data.chain_stats.funded_txo_sum -
+          response.data.chain_stats.spent_txo_sum;
 
-      if (balance > 0) {
+        if (balance > 0) {
+          console.log(
+            `[+] Found balance at index ${i}, address ${address}, balance: ${balance / 1e8
+            } BTC`
+          );
+
+          results.push({
+            index: i,
+            path,
+            address,
+            balance: balance / 1e8, // sats → BTC
+          });
+        } else {
+          console.log(
+            `[-] No balance at index ${i}, address ${address}`
+          );
+
+          results.push({
+            index: i,
+            path,
+            address,
+            balance: 0,
+          });
+        }
+      } catch (err) {
+        console.error(
+          `[x] Error fetching balance for index ${i}, address ${address}: ${err.message}`
+        );
+
         results.push({
           index: i,
           path,
           address,
-          balance: balance / 1e8, // convert sats → BTC
+          error: err.message,
         });
       }
     }
 
-    res.json({ success: true, results });
+    res.json({ success: true, scanned: results.length, results });
   } catch (err) {
     console.error("Scan range error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
-
-app.get("/scan-range-eth/:from/:to", async (req, res) => {
-  try {
-    const from = parseInt(req.params.from, 10);
-    const to = parseInt(req.params.to, 10);
-
-    if (isNaN(from) || isNaN(to) || from < 0 || to < from) {
-      return res.status(400).json({ error: "Invalid range" });
-    }
-
-    const results = [];
-
-    for (let i = from; i <= to; i++) {
-      const { address, path, privateKey } = deriveETHAddress(i);
-
-      // Query Etherscan for ETH balance
-      const response = await axios.get(`https://api.etherscan.io/api`, {
-        params: {
-          module: "account",
-          action: "balance",
-          address: ethers.getAddress(address),
-          tag: "latest",
-          apikey: process.env.ETHERSCAN_KEY,
-        },
-        timeout: 5000,
-      });
-
-      if (response.data.status === "1") {
-        const balance = Number(response.data.result) / 1e18;
-
-        if (balance > 0) {
-          results.push({
-            index: i,
-            path,
-            address,
-            privateKey, // ⚠️ Be careful: exposing privKeys in API is dangerous
-            balance,
-          });
-        }
-      } else {
-        console.warn(`Etherscan error for index ${i}:`, response.data.message);
-      }
-    }
-
-    res.json({ success: true, results });
-  } catch (err) {
-    console.error("ETH Scan range error:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 
 
 
