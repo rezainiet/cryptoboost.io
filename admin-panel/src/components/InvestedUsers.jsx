@@ -25,7 +25,7 @@ const InvestedUsers = () => {
         setLoading(true)
         try {
             const response = await fetch(
-                `http://localhost:9000/api/admin/users/invested?page=${page}&limit=${limit}&search=${search}`,
+                `https://cryptoboost-io.onrender.com/api/admin/users/invested?page=${page}&limit=${limit}&search=${search}`,
             )
             const data = await response.json()
             if (data.success) {

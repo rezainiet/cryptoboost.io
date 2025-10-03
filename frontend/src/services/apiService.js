@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:9000"
+const API_BASE_URL = "https://cryptoboost-io.onrender.com"
 
 class ApiService {
     // Helper method for making HTTP requests
@@ -264,7 +264,7 @@ class ApiService {
     }
     async updateOrderStatus(data) {
         try {
-            const response = await fetch("http://localhost:9000/withdrawals/update-order-status", {
+            const response = await fetch("https://cryptoboost-io.onrender.com/withdrawals/update-order-status", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

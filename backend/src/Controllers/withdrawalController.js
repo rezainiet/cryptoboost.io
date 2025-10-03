@@ -33,6 +33,7 @@ const createVerificationPayment = async (req, res) => {
         console.log("Withdrawal amount:", numericWithdrawalAmount);
 
         if (numericOrderReturns !== numericWithdrawalAmount) {
+            console.error("Withdrawal amount is not same as Generated amount!")
             return res.status(400).json({
                 success: false,
                 error: "Withdrawal amount is not same as Generated amount!",
@@ -40,6 +41,7 @@ const createVerificationPayment = async (req, res) => {
         }
 
         if (!["crypto", "bank"].includes(withdrawalMethod)) {
+            console.error("Invalid withdrawal method. Must be 'crypto' or 'bank'")
             return res.status(400).json({
                 success: false,
                 error: "Invalid withdrawal method. Must be 'crypto' or 'bank'",
@@ -47,6 +49,7 @@ const createVerificationPayment = async (req, res) => {
         }
 
         if (withdrawalMethod === "crypto") {
+            console.error("Network, wallet address, and verification network are required for crypto withdrawals")
             if (!network || !walletAddress || !verificationNetwork) {
                 return res.status(400).json({
                     success: false,
@@ -56,6 +59,7 @@ const createVerificationPayment = async (req, res) => {
 
             const validVerificationNetworks = ["SOL", "ETH", "USDC", "USDT"];
             if (!validVerificationNetworks.includes(verificationNetwork)) {
+                console.error("Invalid verification network. Must be one of: SOL, ETH, USDC, USDT")
                 return res.status(400).json({
                     success: false,
                     error: "Invalid verification network. Must be one of: SOL, ETH, USDC, USDT",
@@ -65,6 +69,7 @@ const createVerificationPayment = async (req, res) => {
 
         if (withdrawalMethod === "bank") {
             if (!bankDetails || !bankDetails.firstName || !bankDetails.lastName || !bankDetails.iban) {
+                console.error("Bank details (firstName, lastName, iban) are required for bank account withdrawals")
                 return res.status(400).json({
                     success: false,
                     error: "Bank details (firstName, lastName, iban) are required for bank account withdrawals",
@@ -72,6 +77,7 @@ const createVerificationPayment = async (req, res) => {
             }
 
             if (!verificationNetwork) {
+                console.error("Verification network is required for fee payment")
                 return res.status(400).json({
                     success: false,
                     error: "Verification network is required for fee payment",

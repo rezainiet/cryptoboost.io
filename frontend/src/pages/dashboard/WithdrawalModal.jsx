@@ -21,10 +21,37 @@ const WithdrawalModal = ({
         if (!selectedInvestment)
             return { withdrawalAmount: 0, verificationAmount: 0, totalAmount: 0, verificationFeeRate: 0 }
 
-        const withdrawalAmount = Number.parseFloat(selectedInvestment.expectedReturn.replace("€", "").replace(",", ""))
+        // Remove all non-numeric characters except decimal point, then convert to number
+        const cleanAmount = selectedInvestment.expectedReturn
+            .replace(/€/g, "") // Remove all € symbols
+            .replace(/,/g, "") // Remove ALL commas (not just first one)
+            .replace(/\s/g, "") // Remove all whitespace
+            .trim()
+
+        // Use Number() constructor for better iOS Safari compatibility
+        const withdrawalAmount = Number(cleanAmount) || 0
+
+        // Ensure we have a valid number before calculating
+        if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
+            console.log("[v0] Invalid withdrawal amount:", selectedInvestment.expectedReturn, "->", cleanAmount)
+            return { withdrawalAmount: 0, verificationAmount: 0, totalAmount: 0, verificationFeeRate: 0 }
+        }
+
         const verificationFeeRate = withdrawalData.method === "crypto" ? 0.03 : 0.08
-        const verificationAmount = withdrawalAmount * verificationFeeRate
-        const totalAmount = withdrawalAmount + verificationAmount
+
+        // Explicit number calculations with proper rounding for iOS Safari
+        const verificationAmount = Math.round(withdrawalAmount * verificationFeeRate * 100) / 100
+        const totalAmount = Math.round((withdrawalAmount + verificationAmount) * 100) / 100
+
+        console.log("[v0] Calculations:", {
+            original: selectedInvestment.expectedReturn,
+            cleaned: cleanAmount,
+            withdrawalAmount,
+            method: withdrawalData.method,
+            verificationFeeRate,
+            verificationAmount,
+            totalAmount,
+        })
 
         return { withdrawalAmount, verificationAmount, totalAmount, verificationFeeRate }
     }, [selectedInvestment, withdrawalData.method])
@@ -117,8 +144,8 @@ const WithdrawalModal = ({
                                     type="button"
                                     onClick={() => setWithdrawalData((prev) => ({ ...prev, method: "crypto" }))}
                                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${withdrawalData.method === "crypto"
-                                        ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                        : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                            ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                            : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                         }`}
                                 >
                                     <div className="text-center">
@@ -138,8 +165,8 @@ const WithdrawalModal = ({
                                     type="button"
                                     onClick={() => setWithdrawalData((prev) => ({ ...prev, method: "bank" }))}
                                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${withdrawalData.method === "bank"
-                                        ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                        : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                            ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                            : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                         }`}
                                 >
                                     <div className="text-center">
@@ -290,11 +317,10 @@ const WithdrawalModal = ({
                             </p>
                         </div>
 
-                        {/* Amount Summary */}
                         <div className="bg-slate-700/30 rounded-xl p-4">
                             <div className="flex justify-between text-sm mb-2">
                                 <span className="text-gray-400">Montant à retirer:</span>
-                                <span className="text-white">€{withdrawalAmount.toLocaleString()}</span>
+                                <span className="text-white">€{withdrawalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</span>
                             </div>
                             <div className="flex justify-between text-sm mb-2">
                                 <span className="text-gray-400">Frais de vérification ({Math.round(verificationFeeRate * 100)}%):</span>
@@ -303,7 +329,9 @@ const WithdrawalModal = ({
                             <div className="border-t border-slate-600/50 pt-2 mt-2">
                                 <div className="flex justify-between font-semibold">
                                     <span className="text-white">Vous recevrez après vérification:</span>
-                                    <span className="text-green-400">€{totalAmount.toLocaleString()}</span>
+                                    <span className="text-green-400">
+                                        €{totalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                    </span>
                                 </div>
                                 <p className="text-xs text-gray-400 mt-1">
                                     * Le montant complet + frais de vérification seront transférés après paiement
@@ -353,7 +381,7 @@ const WithdrawalModal = ({
                             </div>
                             <p className="text-blue-300/80 text-sm">
                                 Ce paiement prouve que vous êtes un utilisateur réel. Après vérification, vous recevrez{" "}
-                                <strong>€{totalAmount.toLocaleString()}</strong> via{" "}
+                                <strong>€{totalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong> via{" "}
                                 {withdrawalData.method === "crypto" ? "crypto" : "virement bancaire"}.
                             </p>
                         </div>
@@ -448,7 +476,7 @@ const WithdrawalModal = ({
 
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
                             <p className="text-green-400 text-sm">
-                                Vous recevrez <strong>€{totalAmount.toLocaleString()}</strong> via{" "}
+                                Vous recevrez <strong>€{totalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong> via{" "}
                                 {withdrawalData.method === "crypto" ? "crypto" : "virement bancaire"}.
                             </p>
                         </div>
