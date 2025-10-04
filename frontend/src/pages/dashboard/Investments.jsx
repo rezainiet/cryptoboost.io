@@ -245,9 +245,33 @@ const Investments = () => {
             try {
                 setWithdrawalLoading(true)
 
-                const withdrawalAmount = Number.parseFloat(selectedInvestment.expectedReturn.replace("€", "").replace(",", ""))
+                const cleanAmount = selectedInvestment.expectedReturn
+                    .replace(/€/g, "") // Remove all € symbols
+                    .replace(/,/g, "") // Remove ALL commas (not just first one)
+                    .replace(/\s/g, "") // Remove all whitespace
+                    .trim()
+
+                // Use Number() constructor for better iOS Safari compatibility
+                const withdrawalAmount = Number(cleanAmount) || 0
+
+                // Validate the amount before sending to API
+                if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
+                    console.error("[v0] Invalid withdrawal amount for API:", selectedInvestment.expectedReturn, "->", cleanAmount)
+                    setWithdrawalError("Montant de retrait invalide. Veuillez réessayer.")
+                    setWithdrawalLoading(false)
+                    return
+                }
+
                 const verificationFeeRate = withdrawalData.method === "crypto" ? 0.03 : 0.08
-                const verificationAmount = withdrawalAmount * verificationFeeRate
+                // Proper rounding for decimal calculations
+                const verificationAmount = Math.round(withdrawalAmount * verificationFeeRate * 100) / 100
+
+                console.log("[v0] Sending to API:", {
+                    withdrawalAmount,
+                    verificationAmount,
+                    verificationFeeRate,
+                    method: withdrawalData.method,
+                })
 
                 const verificationResponse = await apiService.createVerificationPayment({
                     orderId: selectedInvestment.orderId,

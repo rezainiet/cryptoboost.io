@@ -36,15 +36,15 @@ const TOKEN_ADDRESSES = {
 // ==================== HELPERS ====================
 
 // Retry wrapper with exponential backoff
-async function withRetry(fn, retries = 5, delay = 500) {
+async function withRetry(fn, retries = 5, delay = 30000) { // 60000ms = 1 minute
     for (let i = 0; i < retries; i++) {
         try {
             return await fn()
         } catch (err) {
             if (err.message.includes("429")) {
-                console.warn(`⚠️ Rate limited. Retry in ${delay}ms...`)
+                console.warn(`⚠️ Rate limited. Retry in ${delay / 1000}s...`)
                 await new Promise((res) => setTimeout(res, delay))
-                delay *= 2
+                delay += 30000 // increase by 1 minute each time
             } else {
                 throw err
             }
@@ -52,6 +52,7 @@ async function withRetry(fn, retries = 5, delay = 500) {
     }
     throw new Error("Failed after retries")
 }
+
 
 
 // ==================== CORE PAYMENT PROCESSING ====================

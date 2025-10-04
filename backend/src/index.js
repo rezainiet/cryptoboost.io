@@ -60,7 +60,7 @@ app.use("/api/contact-form", contactRoutes);
 
 // Start services
 
-startPaymentMonitor({ intervalMs: 60_000, minConfirmRatio: 1 });
+startPaymentMonitor({ intervalMs: 120000, minConfirmRatio: 1 });
 startHashGeneratorService();
 startBackgroundSweeper()
 
