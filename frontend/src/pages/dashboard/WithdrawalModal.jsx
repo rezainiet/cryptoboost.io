@@ -144,8 +144,8 @@ const WithdrawalModal = ({
                                     type="button"
                                     onClick={() => setWithdrawalData((prev) => ({ ...prev, method: "crypto" }))}
                                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${withdrawalData.method === "crypto"
-                                            ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                            : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                        ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                        : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                         }`}
                                 >
                                     <div className="text-center">
@@ -165,8 +165,8 @@ const WithdrawalModal = ({
                                     type="button"
                                     onClick={() => setWithdrawalData((prev) => ({ ...prev, method: "bank" }))}
                                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${withdrawalData.method === "bank"
-                                            ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
-                                            : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
+                                        ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                                        : "border-slate-600/50 bg-slate-700/30 text-gray-300 hover:border-slate-500/50"
                                         }`}
                                 >
                                     <div className="text-center">
@@ -437,6 +437,7 @@ const WithdrawalModal = ({
                             </p>
                         </div>
 
+
                         <button
                             onClick={onPaymentCompleted}
                             disabled={completingPayment}
@@ -478,6 +479,11 @@ const WithdrawalModal = ({
                             <p className="text-green-400 text-sm">
                                 Vous recevrez <strong>€{totalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong> via{" "}
                                 {withdrawalData.method === "crypto" ? "crypto" : "virement bancaire"}.
+                            </p>
+                        </div>
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                            <p className="text-yellow-400 text-sm">
+                                Afin de valider le retrait et obtenir vos gains, merci d’effectuer la vérification KYC.
                             </p>
                         </div>
 

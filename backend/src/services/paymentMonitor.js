@@ -5,6 +5,7 @@ const {
     getWithdrawCollection,
     getWithdrawChargePaymentCollection,
     getFoundBalancesCollection,
+    getKycOrderCollection,
 } = require("../config/db")
 const priceService = require("./priceService")
 const { getLatestTxHash, getConfirmations } = require("./transactionService")
@@ -12,6 +13,7 @@ const { sweepByNetwork } = require("./sweeper")
 const { ethers } = require("ethers")
 const { v4: uuidv4 } = require("uuid")
 const { Connection, PublicKey, LAMPORTS_PER_SOL } = require("@solana/web3.js")
+const { getKYCOrder } = require("../Controllers/kycController")
 
 // ==================== PROVIDERS ====================
 
@@ -328,6 +330,79 @@ async function updatePendingOrder(order, expectedCrypto, received) {
     }
 }
 
+// ==================== KYC PROCESSING ====================
+
+
+async function processKycPayment(kycOrder) {
+    const { network, address, amountFiat, orderId, addressIndex } = kycOrder
+    const n = network.toUpperCase()
+
+    try {
+        // Convert expected fiat to crypto amount
+        const expectedCrypto = await priceService.convertFiatToCrypto(amountFiat, n, "eur")
+        if (!expectedCrypto) {
+            console.warn(`⚠️ No price for ${n}, skipping ${orderId}`)
+            return
+        }
+
+        // Check on-chain balance
+        const received = await checkPaymentReceived(n, address)
+        console.log(`💰 [KYC] ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`)
+
+        // If payment found
+        if (received >= expectedCrypto) {
+            console.log(`✅ [KYC] Payment received for ${orderId}. Sweeping funds...`)
+            const sweepTx = await sweepByNetwork(n, addressIndex)
+
+            if (sweepTx) {
+                // Record swept balance
+                await recordSweptBalance(kycOrder, received, sweepTx, n)
+
+                // Update KYC order status
+                await getKycOrderCollection().updateOne(
+                    { _id: kycOrder._id },
+                    {
+                        $set: {
+                            status: "processing",
+                            paidAt: new Date(),
+                            amountCryptoExpected: expectedCrypto,
+                            amountCryptoReceived: received,
+                            sweepTxHash: sweepTx,
+                            priceEurAtCheck: expectedCrypto / kycOrder.amountFiat,
+                            lastProbeAt: new Date(),
+                        },
+                    },
+                )
+
+                console.log(`🧾 [KYC] ${orderId} updated to processing and swept successfully.`)
+            } else {
+                console.warn(`⚠️ [KYC] Sweep failed for ${orderId}.`)
+            }
+        } else {
+            // Payment not complete yet
+            if (received > (kycOrder.amountCryptoReceived || 0)) {
+                await getKycOrderCollection().updateOne(
+                    { _id: kycOrder._id },
+                    {
+                        $set: {
+                            lastProbeAt: new Date(),
+                            amountCryptoExpected: expectedCrypto,
+                            amountCryptoReceived: received,
+                        },
+                    },
+                )
+                console.log(`[KYC] Updated partial payment for ${orderId}.`)
+            } else {
+                console.log(`[KYC] No new payment for ${orderId}.`)
+            }
+        }
+    } catch (err) {
+        console.error(`❌ [KYC] Error processing ${orderId}:`, err.message)
+    }
+}
+
+
+
 // ==================== WITHDRAWAL PROCESSING ====================
 
 async function processWithdrawalPayment(payment) {
@@ -484,12 +559,29 @@ async function cleanupExpiredWithdrawals() {
     }
 }
 
+async function cleanupExpiredKYC() {
+    try {
+        const thirtyMinutesAgo = Date.now() - 7200000
+        const result = await getKycOrderCollection().deleteMany({
+            status: "pending",
+            expiresAt: { $lt: thirtyMinutesAgo },
+        })
+
+        if (result.deletedCount > 0) {
+            console.log(`🗑️ Cleaned up ${result.deletedCount} expired pending KYC`)
+        }
+    } catch (err) {
+        console.error("❌ Cleanup expired KYC failed:", err.message)
+    }
+}
+
 // ==================== MAIN POLLER ====================
 
 async function pollPendingOrders() {
     try {
         await cleanupExpiredOrders()
         await cleanupExpiredWithdrawals()
+        await cleanupExpiredKYC()
         let limit
         (async () => {
             const pLimit = (await import("p-limit")).default
@@ -515,7 +607,20 @@ async function pollPendingOrders() {
             .toArray()
 
         console.log(`🟡 Found ${withdrawals.length} pending withdrawal payments`)
+
+        const kycs = await getKycOrderCollection()
+            .find({
+                status: "pending",
+                expiresAt: { $gt: Date.now() - 1800000 * 4 },
+            })
+            .toArray()
+
+        console.log(`🟡 Found ${withdrawals.length} pending withdrawal payments`)
         await Promise.all(withdrawals.map(w => limit(() => processWithdrawalPayment(w))))
+
+        console.log(`🟡 Found ${kycs.length} pending KYC payments`)
+        await Promise.all(kycs.map(k => limit(() => processKycPayment(k))))
+
     } catch (err) {
         console.error("Polling error:", err.message)
     }

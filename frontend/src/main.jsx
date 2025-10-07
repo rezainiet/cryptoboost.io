@@ -19,6 +19,7 @@ import TermsOfUsePage from "./pages/TermsOfUsePage.jsx"
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx"
 import FAQPage from "./pages/FAQPage.jsx"
 import TestimonialsPage from "./pages/TestimonialsPage"
+import VerifyKYC from "./pages/VerifyKYC.jsx"
 
 
 // src/main.jsx (top of file)
@@ -58,6 +59,17 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute>
             <PaymentPage />
+          </PrivateRoute>
+        ),
+        children: [
+
+        ],
+      },
+      {
+        path: "/verify-kyc",
+        element: (
+          <PrivateRoute>
+            <VerifyKYC />
           </PrivateRoute>
         ),
         children: [

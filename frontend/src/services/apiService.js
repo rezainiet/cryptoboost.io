@@ -125,6 +125,10 @@ class ApiService {
     async getUserAnalytics(email) {
         return this.makeRequest(`/payments/analytics/${email}`)
     }
+    // Get user portfolio analytics
+    async getUserKYCStatus(email) {
+        return this.makeRequest(`/payments/get-kyc-status/${email}`)
+    }
 
     // Get active investments for dashboard
     async getActiveInvestments(email) {

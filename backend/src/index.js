@@ -13,6 +13,7 @@ const withdrawalRoutes = require("./routes/withdrawalRoutes");
 const priceRoutes = require("./routes/priceRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const contactRoutes = require("./routes/contactRoutes");
+const kycRoutes = require("./routes/kycRoutes");
 
 
 const { startHashGeneratorService } = require("./services/hashGeneratorService");
@@ -56,6 +57,7 @@ app.use("/withdrawals", withdrawalRoutes);
 app.use("/prices", priceRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/contact-form", contactRoutes);
+app.use("/kyc", kycRoutes);
 
 
 // Start services

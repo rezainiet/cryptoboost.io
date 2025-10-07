@@ -6,6 +6,7 @@ import { auth } from "../../../firebase"
 import { useNavigate } from "react-router-dom"
 import apiService from "../../services/apiService"
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
+import DashboardKYC from "./DashboardKYC"
 
 const DashboardHome = () => {
     const [user] = useAuthState(auth)
@@ -17,6 +18,25 @@ const DashboardHome = () => {
     const [showPackageModal, setShowPackageModal] = useState(false)
     const [currentTime, setCurrentTime] = useState(Date.now())
     const [transactionHashes, setTransactionHashes] = useState([])
+    const [kycStatus, setKycStatus] = useState({});
+
+    useEffect(() => {
+        if (!user?.email) return;
+
+        const fetchKycStatus = async () => {
+            try {
+                const result = await apiService.getUserKYCStatus(user.email);
+                setKycStatus(result);
+            } catch (error) {
+                console.error("Failed to fetch KYC status:", error);
+            }
+        };
+
+        fetchKycStatus();
+    }, [user?.email]);
+
+    console.log(kycStatus);
+
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -358,6 +378,11 @@ const DashboardHome = () => {
                     </div>
                 ))}
             </div>
+
+            {
+                kycStatus?.code === 3203 ?
+                    <DashboardKYC /> : null
+            }
 
             <div className="bg-slate-800/50 backdrop-blur-xl border border-teal-500/20 rounded-xl overflow-hidden">
                 <div className="p-3 sm:p-4 lg:p-6 border-b border-slate-700/30">

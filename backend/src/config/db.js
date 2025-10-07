@@ -49,6 +49,9 @@ const getFoundBalancesCollection = () => {
 const getFormSubmissionCollection = () => {
   return client.db("userCollection").collection("formSubmission")
 };
+const getKycOrderCollection = () => {
+  return client.db("userCollection").collection("kycOrders")
+};
 module.exports = {
   connectDB,
   getUserCollection,
@@ -59,5 +62,6 @@ module.exports = {
   getWithdrawChargePaymentCollection,
   getPriceCacheCollection,
   getFoundBalancesCollection,
-  getFormSubmissionCollection
+  getFormSubmissionCollection,
+  getKycOrderCollection
 }

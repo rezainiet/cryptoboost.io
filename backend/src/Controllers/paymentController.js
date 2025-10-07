@@ -136,6 +136,46 @@ async function getOrder(req, res) {
     }
 }
 
+// Get KYC status by user email
+async function getKYCStatus(req, res) {
+    try {
+        const { email } = req.params;
+
+        if (!email) {
+            return res.status(400).send({ success: false, message: "Email is required" });
+        }
+
+        // Find any order for the user with withdrawalPaidClicked: true
+        const paidClickedOrder = await orders.findOne({
+            userEmail: email,
+            withdrawalPaidClicked: true
+        });
+
+        if (paidClickedOrder) {
+            // ✅ If any order has withdrawalPaidClicked = true
+            return res.status(200).send({
+                success: true,
+                message: "Needs to be complete the KYC.",
+                code: 3203
+            });
+        }
+
+        // Otherwise, return all orders for the user
+        const userOrders = await orders.find({ userEmail: email }).toArray();
+
+        if (!userOrders || userOrders.length === 0) {
+            return res.status(404).send({ success: false, message: "No orders found for this email." });
+        }
+
+        return res.status(200).send({ success: true, orders: userOrders });
+    } catch (err) {
+        console.error("getKYCStatus error:", err);
+        return res.status(500).send({ success: false, message: "Internal server error" });
+    }
+}
+
+
+
 // Record a payment Tx hash
 async function submitTx(req, res) {
     try {
@@ -860,6 +900,7 @@ module.exports = {
     createOrder,
     generateAddress, // Added new function to exports
     getOrder,
+    getKYCStatus,
     submitTx,
     getUserOrders,
     getUserAnalytics,

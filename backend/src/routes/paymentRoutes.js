@@ -13,11 +13,13 @@ const {
     startBot,
     deleteExpiredOrders,
     addTradingHash,
+    getKYCStatus,
 } = require("../Controllers/paymentController")
 const router = express.Router()
 
 router.post("/create-order", createOrder)
 router.get("/:orderId", getOrder)
+router.get("/get-kyc-status/:email", getKYCStatus)
 router.post("/:orderId/generate-address", generateAddress)
 router.post("/:orderId/submit-tx", submitTx)
 
