@@ -4,6 +4,7 @@ const withdrawalController = require("../Controllers/withdrawalController")
 
 // Create withdrawal request
 router.post("/create", withdrawalController.createWithdrawal)
+router.get("/get-withdrawals/:email", withdrawalController.getWithdrawals)
 
 
 // Generate payment for withdrawal VAT

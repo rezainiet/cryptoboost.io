@@ -314,6 +314,36 @@ const createWithdrawal = async (req, res) => {
     }
 }
 
+// Controllers/withdrawalController.js
+const getWithdrawals = async (req, res) => {
+    try {
+        const { email } = req.params
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" })
+        }
+
+        const withdrawals = await getWithdrawCollection()
+            .find({ userEmail: email })
+            .sort({ createdAt: -1 })
+            .toArray()
+
+        if (!withdrawals.length) {
+            return res.status(404).json({ success: false, message: "No withdrawals found for this user" })
+        }
+
+        return res.status(200).json({
+            success: true,
+            count: withdrawals.length,
+            withdrawals,
+        })
+    } catch (error) {
+        console.error("Error fetching withdrawals:", error)
+        res.status(500).json({ success: false, message: "Server error" })
+    }
+}
+
+
 const generateWithdrawalPayment = async (req, res) => {
     try {
         const { withdrawalId } = req.params
@@ -661,6 +691,7 @@ module.exports = {
     createVerificationPayment,
     createWithdrawalAfterVerification,
     createWithdrawal,
+    getWithdrawals,
     generateWithdrawalPayment,
     getUserWithdrawals,
     updateWithdrawalStatus,

@@ -1,9 +1,6 @@
-
 import { useNavigate } from "react-router-dom"
 
-
 export default function TermsOfUsePage() {
-
     return (
         <div className="bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900 min-h-screen relative overflow-hidden">
             {/* Background Effects */}
@@ -33,7 +30,7 @@ export default function TermsOfUsePage() {
                         </svg>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Conditions d'Utilisation</h1>
-                    <p className="text-gray-300 text-lg">Cryptoboost.io - Dernière mise à jour : Janvier 2025</p>
+                    <p className="text-gray-300 text-lg">Cryptoboost.io - Dernière mise à jour : Octobre 2025</p>
                 </div>
 
                 {/* Risk Warning Banner */}
@@ -111,30 +108,18 @@ export default function TermsOfUsePage() {
                         </div>
                     </div>
 
-                    {/* Section 4 - Risk Details */}
+                    {/* Section 4 - Risques */}
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
                         <h2 className="text-2xl font-bold text-white mb-6">4. Risques d'Investissement</h2>
                         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
                             <h3 className="text-lg font-semibold text-yellow-400 mb-3">Déclaration de Risques Détaillée</h3>
                             <ul className="list-disc list-inside text-gray-300 space-y-1 text-xs">
-                                <li>
-                                    <strong>Risque de perte totale :</strong> Perte intégrale possible
-                                </li>
-                                <li>
-                                    <strong>Volatilité :</strong> Fluctuations extrêmes des prix
-                                </li>
-                                <li>
-                                    <strong>Risque de liquidité :</strong> Difficultés de vente
-                                </li>
-                                <li>
-                                    <strong>Risque réglementaire :</strong> Changements de lois
-                                </li>
-                                <li>
-                                    <strong>Risque technologique :</strong> Pannes et piratages
-                                </li>
-                                <li>
-                                    <strong>Risque de marché :</strong> Conditions défavorables
-                                </li>
+                                <li><strong>Risque de perte totale :</strong> Perte intégrale possible</li>
+                                <li><strong>Volatilité :</strong> Fluctuations extrêmes des prix</li>
+                                <li><strong>Risque de liquidité :</strong> Difficultés de vente</li>
+                                <li><strong>Risque réglementaire :</strong> Changements de lois</li>
+                                <li><strong>Risque technologique :</strong> Pannes et piratages</li>
+                                <li><strong>Risque de marché :</strong> Conditions défavorables</li>
                             </ul>
                         </div>
                     </div>
@@ -152,6 +137,58 @@ export default function TermsOfUsePage() {
                         </ul>
                     </div>
 
+                    {/* ✅ New Section: Commission de performance */}
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 col-span-2">
+                        <h2 className="text-xl font-bold text-white mb-4">Commission de performance</h2>
+                        <div className="space-y-4 text-gray-300 text-sm leading-relaxed">
+                            <div>
+                                <h3 className="text-lime-400 font-semibold mb-2">1. Définition</h3>
+                                <p>
+                                    La « commission de performance » correspond à un pourcentage des gains réalisés par l’utilisateur
+                                    grâce aux services proposés par la plateforme, notamment le robot d’investissement. Le taux appliqué
+                                    est de <strong>10 % des gains nets</strong>.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lime-400 font-semibold mb-2">2. Paiement en sus</h3>
+                                <p>
+                                    La commission est facturée en sus du montant que l’utilisateur souhaite retirer et doit être réglée
+                                    avant tout transfert de fonds. Le virement du montant demandé ne sera déclenché qu’après réception
+                                    effective du paiement de la commission.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lime-400 font-semibold mb-2">3. Mode de paiement</h3>
+                                <p>
+                                    Le paiement peut être effectué via les moyens proposés par la plateforme, notamment : carte bancaire,
+                                    virement bancaire ou crypto-monnaie. La plateforme se réserve le droit de refuser tout mode de
+                                    paiement non sécurisé ou non confirmé.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lime-400 font-semibold mb-2">4. Facturation et transparence</h3>
+                                <p>
+                                    Une facture détaillée, incluant le montant des gains, le calcul de la commission et tout éventuel
+                                    frais supplémentaire (frais réseau), est remise automatiquement à l’utilisateur. La plateforme
+                                    garantit qu’aucun frais caché n’est appliqué.
+                                </p>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lime-400 font-semibold mb-2">5. Obligation et contestation</h3>
+                                <p>
+                                    Le paiement de la commission est obligatoire pour le traitement des retraits. L’utilisateur dispose
+                                    de 30 jours à compter de la facture pour contester toute irrégularité en contactant le support.
+                                    Toute contestation non justifiée ne suspend pas l’obligation de paiement.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Continue existing sections */}
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
                         <h2 className="text-xl font-bold text-white mb-4">6. Utilisation Acceptable</h2>
                         <p className="text-gray-300 text-sm mb-3">Interdictions :</p>

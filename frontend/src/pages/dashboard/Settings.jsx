@@ -5,6 +5,7 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { auth } from "../../../firebase"
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth"
 import { apiService } from "../../services/apiService"
+import DashboardKYC from "./DashboardKYC"
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState("profile")
@@ -27,6 +28,22 @@ const Settings = () => {
         newPassword: "",
         confirmPassword: "",
     })
+    const [kycStatus, setKycStatus] = useState({});
+
+    useEffect(() => {
+        if (!user?.email) return;
+
+        const fetchKycStatus = async () => {
+            try {
+                const result = await apiService.getUserKYCStatus(user.email);
+                setKycStatus(result);
+            } catch (error) {
+                console.error("Failed to fetch KYC status:", error);
+            }
+        };
+
+        fetchKycStatus();
+    }, [user?.email]);
 
     const tabs = [
         { id: "profile", label: "Profil", icon: "👤" },
@@ -278,20 +295,25 @@ const Settings = () => {
                                 {/* KYC Verification */}
                                 <div className="bg-slate-800/50 backdrop-blur-xl border border-teal-500/20 rounded-xl p-6 hover:border-teal-400/30 transition-all duration-300">
                                     <h3 className="text-xl font-bold text-white mb-4">Vérification KYC</h3>
-                                    <div className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
-                                                <span className="text-white text-lg">✓</span>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-white font-medium">Compte Vérifié</h4>
-                                                <p className="text-emerald-400 text-sm">Votre identité a été confirmée</p>
-                                            </div>
-                                        </div>
-                                        <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm font-medium">
-                                            Vérifié
-                                        </span>
-                                    </div>
+                                    {
+                                        kycStatus?.code === 3203 ?
+                                            <DashboardKYC /> : (
+                                                <div className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                                                            <span className="text-white text-lg">✓</span>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-white font-medium">Compte Vérifié</h4>
+                                                            <p className="text-emerald-400 text-sm">Votre identité a été confirmée</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm font-medium">
+                                                        Vérifié
+                                                    </span>
+                                                </div>
+                                            )
+                                    }
                                 </div>
                             </>
                         )}
