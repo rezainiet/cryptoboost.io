@@ -312,8 +312,7 @@ const WithdrawalModal = ({
                                 <span className="text-yellow-400 font-semibold text-sm sm:text-base">Frais de vérification</span>
                             </div>
                             <p className="text-yellow-300/80 text-xs sm:text-sm">
-                                Vous devez d'abord payer les frais de vérification en crypto ({Math.round(verificationFeeRate * 100)}%)
-                                pour confirmer votre identité avant de recevoir votre retrait complet.
+                                Vous devez d’abord payer les frais de vérification en crypto ({Math.round(verificationFeeRate * 100)}%). Pour confirmer que l’adresse sur laquelle vous recevez vous appartient.
                             </p>
                         </div>
 

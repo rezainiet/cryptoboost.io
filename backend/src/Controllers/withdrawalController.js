@@ -149,6 +149,7 @@ const createVerificationPayment = async (req, res) => {
             verificationFeePercentage,
             withdrawalMethod,
             verificationNetwork, // keep separate
+            network: verificationNetwork, // keep separate
             status: "pending",
             type: "verification_payment",
             createdAt: new Date().toISOString(),

