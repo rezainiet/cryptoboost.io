@@ -31,6 +31,9 @@ class ApiService {
             name: userData.name,
             email: userData.email,
             phone: userData.phone,
+            telegram: userData.telegram,
+            referral: userData.referral,
+            password: userData.password,
             // Remove instituteName - not relevant for crypto platform
             userType: "investor", // Default user type for crypto platform
             registrationSource: "web",

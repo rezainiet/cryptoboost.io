@@ -5,8 +5,11 @@ import { Link, useNavigate } from "react-router-dom"
 import { useAuthState, useCreateUserWithEmailAndPassword } from "react-firebase-hooks/auth"
 import { auth } from "../../firebase"
 import apiService from "../services/apiService"
+import { useReferralData } from "../hooks/useReferralData"
 
 export default function RegisterPage() {
+    const refData = useReferralData(); // ✅ this now persists
+
     const navigate = useNavigate()
     const [user, loading] = useAuthState(auth)
     const [createUserWithEmailAndPassword, firebaseUser, firebaseLoading, firebaseError] =
@@ -111,6 +114,7 @@ export default function RegisterPage() {
 
             try {
                 const userData = {
+                    referral: refData,
                     name: `${formData.firstName} ${formData.lastName}`,
                     telegram: formData.telegramUserName,
                     email: formData.email,
