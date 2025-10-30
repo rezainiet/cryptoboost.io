@@ -1,5 +1,5 @@
 const moment = require("moment")
-const { getOrdersCollection, getCountersCollection } = require("../config/db")
+const { getOrdersCollection, getCountersCollection, getKycOrderCollection } = require("../config/db")
 const { deriveAddressByNetwork } = require("../services/hdWallet")
 const priceService = require("../services/priceService")
 const { ulid } = require("ulid")
@@ -145,17 +145,29 @@ async function getKYCStatus(req, res) {
             return res.status(400).send({ success: false, message: "Email is required" });
         }
 
-        // Find any order for the user with withdrawalPaidClicked: true
+        // Fetch all KYC orders for this user
+        const getKYCOrders = await getKycOrderCollection().find({ userEmail: email }).toArray();
+
+        // ✅ If any KYC order has "processing" status
+        const processingKyc = getKYCOrders.find(order => order.verificationStatus === "processing");
+        if (processingKyc) {
+            return res.status(200).send({
+                success: true,
+                message: "Your KYC verification is currently being processed.",
+                code: 3204
+            });
+        }
+
+        // ✅ If any order has withdrawalPaidClicked = true
         const paidClickedOrder = await orders.findOne({
             userEmail: email,
             withdrawalPaidClicked: true
         });
 
         if (paidClickedOrder) {
-            // ✅ If any order has withdrawalPaidClicked = true
             return res.status(200).send({
                 success: true,
-                message: "Needs to be complete the KYC.",
+                message: "Needs to complete the KYC.",
                 code: 3203
             });
         }
@@ -173,6 +185,7 @@ async function getKYCStatus(req, res) {
         return res.status(500).send({ success: false, message: "Internal server error" });
     }
 }
+
 
 
 

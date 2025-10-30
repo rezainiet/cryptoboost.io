@@ -419,7 +419,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Dashboard Content */}
-                <div className="flex-1 p-6">
+                <div className="flex-1 p-0 md:p-2 lg:p-6">
                     {/* Header - hidden on mobile */}
                     <div className="mb-8 hidden lg:block">
                         <div className="flex items-center justify-between">

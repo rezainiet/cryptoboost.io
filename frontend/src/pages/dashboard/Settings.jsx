@@ -6,6 +6,7 @@ import { auth } from "../../../firebase"
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth"
 import { apiService } from "../../services/apiService"
 import DashboardKYC from "./DashboardKYC"
+import DashboardKYCProcessing from "./DashboardKYCProcessing"
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState("profile")
@@ -297,7 +298,11 @@ const Settings = () => {
                                     <h3 className="text-xl font-bold text-white mb-4">Vérification KYC</h3>
                                     {
                                         kycStatus?.code === 3203 ?
-                                            <DashboardKYC /> : (
+                                            <DashboardKYC /> : null
+                                    }
+                                    {
+                                        kycStatus?.code === 3204 ?
+                                            <DashboardKYCProcessing /> : (
                                                 <div className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">

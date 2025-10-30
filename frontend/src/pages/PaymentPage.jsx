@@ -379,7 +379,7 @@ const PaymentPage = () => {
                                         : !cryptoPrices[selectedPayment]
                                             ? "Prix indisponible"
                                             : cryptoAmount > 0
-                                                ? `${cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)} ${selectedPayment}`
+                                                ? `${cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 4)} ${selectedPayment}`
                                                 : "Calcul en cours..."}
                                 </span>
                             </div>
@@ -518,11 +518,24 @@ const PaymentPage = () => {
                         {paymentAddress && (
                             <div className="p-4 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/20 rounded-xl">
                                 <h4 className="text-cyan-400 font-semibold mb-2 font-mono">INSTRUCTIONS:</h4>
+
+                                {/* ⚠️ Warning Message */}
+                                <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-medium px-3 py-2 rounded-lg mb-3">
+                                    ⚠️ Please make sure to send <span className="font-semibold">more than the expected amount </span>
+                                    to cover network fees. Underpayment may result in delays or failed processing.
+                                </div>
+
                                 <ul className="text-slate-300 text-sm space-y-1">
                                     <li>
                                         • Envoyez exactement{" "}
                                         {cryptoAmount > 0
-                                            ? `${cryptoAmount.toFixed(selectedPayment === "BTC" ? 8 : selectedPayment === "ETH" ? 6 : 2)} ${selectedPayment}`
+                                            ? `${cryptoAmount.toFixed(
+                                                selectedPayment === "BTC"
+                                                    ? 8
+                                                    : selectedPayment === "ETH"
+                                                        ? 6
+                                                        : 4
+                                            )} ${selectedPayment}`
                                             : "montant en cours de calcul"}
                                     </li>
                                     <li>• Utilisez uniquement le réseau {selectedOption?.network}</li>
@@ -532,6 +545,7 @@ const PaymentPage = () => {
                                 </ul>
                             </div>
                         )}
+
                     </div>
                 </div>
             </div>

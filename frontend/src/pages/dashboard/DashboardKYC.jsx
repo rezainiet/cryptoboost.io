@@ -34,23 +34,6 @@ const DashboardKYC = () => {
                 </div>
             </div>
 
-            {/* <div className="bg-slate-800/50 backdrop-blur-xl border border-teal-500/20 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-4">Statut de Vérification</h2>
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
-                        <span className="text-gray-300">Identité</span>
-                        <span className="text-yellow-400 font-medium">En attente</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
-                        <span className="text-gray-300">Adresse</span>
-                        <span className="text-yellow-400 font-medium">En attente</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
-                        <span className="text-gray-300">Paiement de Vérification</span>
-                        <span className="text-yellow-400 font-medium">En attente</span>
-                    </div>
-                </div>
-            </div> */}
         </div>
     )
 }
