@@ -38,13 +38,14 @@ const NonInvestedUsers = () => {
     }
 
     const generateCSV = (data, filename) => {
-        const headers = ["Name", "Email", "Telegram", "Registration Date", "Phone", "Status"]
+        const headers = ["Name", "Email", "Phone", "Telegram", "Registration Date", "Phone", "Status"]
         const csvContent = [
             headers.join(","),
             ...data.map((user) =>
                 [
                     `"${user.name || ""}"`,
                     `"${user.email || ""}"`,
+                    `"${user.phone || ""}"`,
                     `"${user.telegram || ""}"`,
                     `"${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}"`,
                     `"${user.phone || "N/A"}"`,
@@ -190,6 +191,9 @@ const NonInvestedUsers = () => {
                                         )}
                                     </td>
 
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}</div>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{user?.phone || "N/A"}</div>
                                     </td>

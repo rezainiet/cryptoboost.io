@@ -431,9 +431,10 @@ const WithdrawalModal = ({
                         </div>
 
                         <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-medium px-3 py-2 rounded-lg mb-3">
-                            ⚠️ Please make sure to send <span className="font-semibold">more than the expected amount </span>
-                            to cover network fees. Underpayment may result in delays or failed processing.
+                            ⚠️ Veuillez vous assurer d’envoyer <span className="font-semibold">un montant supérieur au montant attendu</span>
+                            afin de couvrir les frais de réseau. Un paiement insuffisant peut entraîner des retards ou un échec du traitement.
                         </div>
+
 
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
                             <p className="text-green-400 text-sm">

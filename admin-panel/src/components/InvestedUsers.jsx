@@ -41,13 +41,14 @@ const InvestedUsers = () => {
     }
 
     const generateCSV = (data, filename) => {
-        const headers = ["Name", "Email", "Telegram", "Total Invested", "Investment Count", "Last Investment Date", "Status"]
+        const headers = ["Name", "Email", "Phone", "Telegram", "Total Invested", "Investment Count", "Last Investment Date", "Status"]
         const csvContent = [
             headers.join(","),
             ...data.map((user) =>
                 [
                     `"${user.name || ""}"`,
                     `"${user.email || ""}"`,
+                    `"${user.phone || ""}"`,
                     `"${user.telegram || ""}"`,
                     `"${user.totalInvested?.toLocaleString() || 0}"`,
                     `"${user.investmentCount || 0}"`,
@@ -153,6 +154,9 @@ const InvestedUsers = () => {
                                 Telegram
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Phone
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Total Invested
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -197,6 +201,9 @@ const InvestedUsers = () => {
                                         )}
                                     </td>
 
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                        {user.phone || ""}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                         €{user.totalInvested?.toLocaleString() || 0}
                                     </td>

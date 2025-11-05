@@ -172,7 +172,6 @@ async function checkSOLBalance(address) {
 }
 
 // ==================== ORDER + WITHDRAWAL PROCESSING ====================
-
 async function processOrderPayment(order) {
     const { network, address, amountFiat, orderId, addressIndex } = order
     const n = network.toUpperCase()
@@ -197,9 +196,19 @@ async function processOrderPayment(order) {
 
         console.log(`💰 ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`)
 
+        // ✅ Full payment or overpayment
         if (received >= expectedCrypto) {
             await completeOrderPayment(order, expectedCrypto, received, txNetwork)
-        } else {
+        }
+        // ⚠️ Partial payment — new feature
+        else if (received > 0 && received < expectedCrypto) {
+            console.warn(
+                `⚠️ ${orderId}: received amount (${received}) less than expected (${expectedCrypto}). Marking as less_than_expected.`
+            )
+            await markLessThanExpectedOrder(order, expectedCrypto, received)
+        }
+        // ℹ️ No new payment or unchanged amount
+        else {
             await updatePendingOrder(order, expectedCrypto, received)
         }
     } catch (err) {
@@ -207,27 +216,21 @@ async function processOrderPayment(order) {
     }
 }
 
-async function checkBTCPaymentReceived(address) {
-    try {
-        const { data } = await withRetry(() =>
-            axios.get(`https://blockstream.info/api/address/${address}/txs`)
-        )
-        const receivedSats = data.reduce((total, tx) => {
-            return (
-                total +
-                tx.vout.reduce((txTotal, output) => {
-                    if (output.scriptpubkey_address === address) {
-                        return txTotal + output.value
-                    }
-                    return txTotal
-                }, 0)
-            )
-        }, 0)
-        return receivedSats / 1e8
-    } catch (err) {
-        console.error("BTC payment check error:", err.message)
-        return 0
-    }
+// 🆕 New helper function for less_than_expected status
+async function markLessThanExpectedOrder(order, expectedCrypto, received) {
+    await getOrdersCollection().updateOne(
+        { _id: order._id },
+        {
+            $set: {
+                status: "less_than_expected",
+                lastProbeAt: new Date(),
+                amountCryptoExpected: expectedCrypto,
+                amountCryptoReceived: received,
+            },
+        }
+    )
+
+    console.log(`⚠️ [Order ${order.orderId}] marked as less_than_expected.`)
 }
 
 async function completeOrderPayment(order, expectedCrypto, received, txNetwork) {
@@ -279,7 +282,7 @@ async function completeOrderPayment(order, expectedCrypto, received, txNetwork) 
                 console.log(
                     updateResult.modifiedCount === 1
                         ? `📦 ${orderId} updated to processing`
-                        : `❌ Failed to update ${orderId}`,
+                        : `❌ Failed to update ${orderId}`
                 )
             } else {
                 console.error(`❌ Sweep did not return a tx for ${orderId}, skipping status update.`)
@@ -322,7 +325,7 @@ async function updatePendingOrder(order, expectedCrypto, received) {
                     amountCryptoExpected: expectedCrypto,
                     amountCryptoReceived: received,
                 },
-            },
+            }
         )
         console.log(`[PM: ⌛ Payment updated for] ${order.orderId} | Received: ${received}`)
     } else {
@@ -349,16 +352,14 @@ async function processKycPayment(kycOrder) {
         const received = await checkPaymentReceived(n, address)
         console.log(`💰 [KYC] ${orderId} | Expected: ${expectedCrypto.toFixed(8)} ${n}, Received: ${received.toFixed(8)}`)
 
-        // If payment found
+        // ✅ Full or overpayment
         if (received >= expectedCrypto) {
             console.log(`✅ [KYC] Payment received for ${orderId}. Sweeping funds...`)
             const sweepTx = await sweepByNetwork(n, addressIndex)
 
             if (sweepTx) {
-                // Record swept balance
                 await recordSweptBalance(kycOrder, received, sweepTx, n)
 
-                // Update KYC order status
                 await getKycOrderCollection().updateOne(
                     { _id: kycOrder._id },
                     {
@@ -378,8 +379,25 @@ async function processKycPayment(kycOrder) {
             } else {
                 console.warn(`⚠️ [KYC] Sweep failed for ${orderId}.`)
             }
+
+            // ⚠️ Partial payment (less than expected but more than 0)
+        } else if (received > 0 && received < expectedCrypto) {
+            await getKycOrderCollection().updateOne(
+                { _id: kycOrder._id },
+                {
+                    $set: {
+                        status: "less_than_expected",
+                        lastProbeAt: new Date(),
+                        amountCryptoExpected: expectedCrypto,
+                        amountCryptoReceived: received,
+                    },
+                },
+            )
+
+            console.log(`⚠️ [KYC] ${orderId} received less than expected. Status set to "less_than_expected".`)
+
+            // ℹ️ No new payment detected
         } else {
-            // Payment not complete yet
             if (received > (kycOrder.amountCryptoReceived || 0)) {
                 await getKycOrderCollection().updateOne(
                     { _id: kycOrder._id },
@@ -414,15 +432,49 @@ async function processWithdrawalPayment(payment) {
 
         if (received >= expected) {
             await completeWithdrawalPayment(payment, received, expected)
-        } else {
+        }
+        // ⚠️ New feature: Received > 0 but < expected
+        else if (received > 0 && received < expected) {
             console.log(
-                `⚠️ Withdrawal ${verificationPaymentId}: received amount (${received}) less than expected (${expected}). Skipping.`
+                `⚠️ Withdrawal ${verificationPaymentId}: received amount (${received}) is less than expected (${expected}). Marking as less_than_expected.`
+            )
+            await markLessThanExpectedWithdrawal(payment, received)
+        }
+        else {
+            console.log(
+                `⚠️ Withdrawal ${verificationPaymentId}: No new or insufficient payment (${received}). Skipping.`
             )
             await updatePendingWithdrawal(payment, received)
         }
     } catch (err) {
-        console.error(`Withdrawal check failed for ${verificationPaymentId}:`, err.message)
+        console.error(`❌ Withdrawal check failed for ${verificationPaymentId}:`, err.message)
     }
+}
+
+async function updatePendingWithdrawal(payment, received) {
+    await getWithdrawChargePaymentCollection().updateOne(
+        { _id: payment._id },
+        {
+            $set: {
+                lastProbeAt: new Date(),
+                amountCryptoReceived: received,
+            },
+        }
+    )
+}
+
+// 🆕 Added function for marking "less_than_expected"
+async function markLessThanExpectedWithdrawal(payment, received) {
+    await getWithdrawChargePaymentCollection().updateOne(
+        { _id: payment._id },
+        {
+            $set: {
+                status: "less_than_expected",
+                lastProbeAt: new Date(),
+                amountCryptoReceived: received,
+            },
+        }
+    )
 }
 
 async function completeWithdrawalPayment(payment, received, expected) {
@@ -513,17 +565,7 @@ async function createWithdrawalRequest(payment) {
     console.log(`📝 Created withdrawal request for ${payment.userEmail}`)
 }
 
-async function updatePendingWithdrawal(payment, received) {
-    await getWithdrawChargePaymentCollection().updateOne(
-        { _id: payment._id },
-        {
-            $set: {
-                lastProbeAt: new Date(),
-                amountCryptoReceived: received,
-            },
-        }
-    )
-}
+
 
 // ==================== CLEANUP FUNCTIONS ====================
 
