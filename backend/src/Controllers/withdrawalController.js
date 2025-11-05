@@ -462,8 +462,16 @@ async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = 
             async function fetchTxWithRetry(signature, retries = 10, delay = 1000) {
                 for (let i = 0; i < retries; i++) {
                     try {
-                        return await solConnection.getParsedTransaction(signature, { commitment: "confirmed" });
+                        const tx = await solConnection.getParsedTransaction(signature, {
+                            commitment: "confirmed",
+                            maxSupportedTransactionVersion: 0,
+                        });
+                        return tx;
                     } catch (err) {
+                        if (err.message.includes("not supported by the requesting client")) {
+                            console.warn(`⚠️ Skipping tx ${signature} due to unsupported version`);
+                            return null; // skip this one safely
+                        }
                         if (err.message.includes("429") && i < retries - 1) {
                             console.log(`⚡ RPC rate limited. Retry #${i + 1} after ${delay}ms`);
                             await new Promise(res => setTimeout(res, delay));
@@ -474,6 +482,7 @@ async function checkPaymentSent(network, address, expectedAmount, tokenSymbol = 
                     }
                 }
             }
+
 
             for (const sig of sigs) {
                 console.log(`⏳ Checking tx: ${sig.signature}`);
