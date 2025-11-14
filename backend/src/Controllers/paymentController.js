@@ -148,8 +148,18 @@ async function getKYCStatus(req, res) {
         // Fetch all KYC orders for this user
         const getKYCOrders = await getKycOrderCollection().find({ userEmail: email }).toArray();
 
+        // ✅ If any KYC order has "processed" status
+        const processedKyc = getKYCOrders.find(order => order.status === "processed");
+        if (processedKyc) {
+            return res.status(200).send({
+                success: true,
+                message: "Your KYC verification successfully verified.",
+                code: 3205
+            });
+        };
+
         // ✅ If any KYC order has "processing" status
-        const processingKyc = getKYCOrders.find(order => order.verificationStatus === "processing");
+        const processingKyc = getKYCOrders.find(order => order.status === "processing");
         if (processingKyc) {
             return res.status(200).send({
                 success: true,
