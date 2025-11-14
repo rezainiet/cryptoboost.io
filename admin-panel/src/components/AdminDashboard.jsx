@@ -5,7 +5,8 @@ import {
     UserCheck,
     UserX,
     CreditCard,
-    Headphones
+    Headphones,
+    IdCard
 } from "lucide-react"
 
 import { useState, useEffect } from "react"
@@ -21,6 +22,8 @@ import InvestedUsers from "./InvestedUsers"
 import NonInvestedUsers from "./NonInvestedUsers"
 import Transactions from "./Transactions"
 import ContactSupport from "./ContactSupport"
+import KYC from "./KYC"
+import ManagePackageReturn from "./ManagePackageReturn"
 
 
 
@@ -374,6 +377,30 @@ const AdminDashboard = () => {
                                     Support Contacts
                                 </button>
                             </li>
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab("kyc")}
+                                    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors ${activeTab === "kyc"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-300 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                >
+                                    <IdCard className="w-5 h-5 mr-3" />
+                                    KYC Verification
+                                </button>
+                            </li>
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab("manage-package-final-return")}
+                                    className={`w-full flex items-center px-4 py-2 text-left rounded-lg transition-colors ${activeTab === "manage-package-final-return"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-300 hover:bg-slate-700 hover:text-white"
+                                        }`}
+                                >
+                                    <IdCard className="w-5 h-5 mr-3" />
+                                    Set Final Return
+                                </button>
+                            </li>
                         </ul>
                     </nav>
 
@@ -458,6 +485,8 @@ const AdminDashboard = () => {
                     {activeTab === "NonInvestedUsers" && <NonInvestedUsers />}
                     {activeTab === "Transactions" && <Transactions />}
                     {activeTab === "Support-Contacts" && <ContactSupport />}
+                    {activeTab === "kyc" && <KYC />}
+                    {activeTab === "manage-package-final-return" && <ManagePackageReturn />}
 
                 </div>
             </div>

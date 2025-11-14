@@ -13,7 +13,7 @@ const {
     startBot,
     deleteExpiredOrders,
     addTradingHash,
-    getKYCStatus,
+    getKYCStatus
 } = require("../Controllers/paymentController")
 const router = express.Router()
 
@@ -32,5 +32,4 @@ router.get("/dashboard-stats/:email", getDashboardStats)
 router.post("/:orderId/start-bot", startBot)
 router.post("/:orderId/add-hash", addTradingHash)
 router.delete("/delete-expired", deleteExpiredOrders)
-
 module.exports = router

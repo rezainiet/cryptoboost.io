@@ -8,6 +8,7 @@ import apiService from "../../services/apiService"
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
 import DashboardKYC from "./DashboardKYC"
 import DashboardKYCProcessing from "./DashboardKYCProcessing"
+import DashboardKYCProcessed from "./DashboardKYCProcessed"
 
 const DashboardHome = () => {
     const [user] = useAuthState(auth)
@@ -387,6 +388,10 @@ const DashboardHome = () => {
             {
                 kycStatus?.code === 3204 ?
                     <DashboardKYCProcessing /> : null
+            }
+            {
+                kycStatus?.code === 3205 ?
+                    <DashboardKYCProcessed /> : null
             }
 
             <div className="bg-slate-800/50 backdrop-blur-xl border border-teal-500/20 rounded-xl overflow-hidden">

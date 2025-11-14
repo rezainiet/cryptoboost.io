@@ -917,7 +917,8 @@ async function generateAddress(req, res) {
         console.error("[v0] generateAddress error:", err)
         res.status(500).send({ success: false, message: "Internal server error" })
     }
-}
+};
+
 
 module.exports = {
     createOrder,

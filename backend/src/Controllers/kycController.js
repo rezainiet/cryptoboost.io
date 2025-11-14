@@ -1,7 +1,7 @@
 const { ulid } = require("ulid")
 const moment = require("moment")
 const priceService = require("../services/priceService")
-const { getKycOrderCollection, getCountersCollection } = require("../config/db")
+const { getKycOrderCollection, getCountersCollection, getOrdersCollection } = require("../config/db")
 const { deriveAddressByNetwork } = require("../services/hdWallet")
 
 
@@ -123,8 +123,167 @@ async function createKYCOrder(req, res) {
         console.error("[v0] createKYCOrder error:", err)
         res.status(500).send({ success: false, message: "Internal server error" })
     }
+};
+
+
+async function getKYCProcessingStatus(req, res) {
+    try {
+        console.log("[v0] getKYCProcessingStatus called")
+
+        // Query only processing orders
+        const orders = await getKycOrderCollection()
+            .find(
+                { status: "processing" },
+                {
+                    projection: {
+                        _id: 0,
+                        orderId: 1,
+                        userEmail: 1,
+                        status: 1,
+                        verificationStatus: 1,
+                        createdAt: 1,
+                        amountFiat: 1,
+                        fiatCurrency: 1,
+                        amountCrypto: 1,
+                        cryptoSymbol: 1,
+                        network: 1,
+                        txHash: 1,
+                        confirmations: 1
+                    }
+                }
+            )
+            .toArray()
+
+        // If no processing orders found
+        if (!orders || orders.length === 0) {
+            return res.send({
+                success: true,
+                message: "No KYC orders currently in processing status",
+                orders: []
+            })
+        }
+
+        return res.send({
+            success: true,
+            count: orders.length,
+            orders
+        })
+
+    } catch (error) {
+        console.error("[v0] getKYCProcessingStatus error:", error)
+        return res.status(500).send({
+            success: false,
+            message: "Internal server error"
+        })
+    }
+};
+
+async function confirmKYCOrder(req, res) {
+    try {
+        const { orderId } = req.params
+        const result = await getKycOrderCollection().findOneAndUpdate(
+            { orderId },
+            { $set: { status: "processed", verificationStatus: "verified" } },
+            { returnDocument: "after" }
+        )
+
+        const updatedOrder = result.value || result // support both driver formats
+
+        if (!updatedOrder) {
+            return res.status(404).send({ success: false, message: "Order not found" })
+        }
+
+        return res.send({
+            success: true,
+            message: "KYC marked as verified",
+            order: updatedOrder
+        })
+
+
+    } catch (error) {
+        console.error("confirmKYCOrder error:", error)
+        return res.status(500).send({ success: false, message: "Internal server error" })
+    }
+};
+
+async function getUpdatableOrders(req, res) {
+    try {
+
+        const orderCollection = await getOrdersCollection()
+
+        // Fetch orders with status: started OR processing
+        const orders = await orderCollection
+            .find({ status: { $in: ["started", "processing"] } })
+            .toArray()
+
+        // No orders found
+        if (!orders || orders.length === 0) {
+            return res.send({
+                success: true,
+                message: "No updatable orders found",
+                orders: []
+            })
+        }
+
+        // Return full documents
+        return res.send({
+            success: true,
+            count: orders.length,
+            orders
+        })
+
+    } catch (error) {
+        console.error(" getUpdatableOrders error:", error)
+        return res.status(500).send({
+            success: false,
+            message: "Internal server error"
+        })
+    }
+};
+
+async function updatePackageReturn(req, res) {
+    try {
+        const { orderId } = req.params
+        const { returns } = req.body
+        console.log(returns)
+
+        if (!returns && returns !== 0) {
+            return res.status(400).send({ success: false, message: "Return amount is required" })
+        }
+
+        const result = await getOrdersCollection().findOneAndUpdate(
+            { orderId },
+            { $set: { "package.returns": returns } },
+            { returnDocument: "after" }
+        )
+        console.log("result", result)
+
+        const updated = result.value || result
+
+        if (!updated) {
+            return res.status(404).send({ success: false, message: "Order not found" })
+        }
+
+        return res.send({
+            success: true,
+            message: "Package return updated successfully",
+            order: updated
+        })
+
+    } catch (error) {
+        console.error("updatePackageReturn error:", error)
+        return res.status(500).send({ success: false, message: "Internal server error" })
+    }
 }
 
+
+
+
+
 module.exports = {
-    createKYCOrder
+    createKYCOrder,
+    getKYCProcessingStatus,
+    confirmKYCOrder,
+    getUpdatableOrders,
+    updatePackageReturn
 }
