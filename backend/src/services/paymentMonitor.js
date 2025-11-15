@@ -445,16 +445,24 @@ async function processKycPayment(kycOrder) {
 // ==================== WITHDRAWAL PROCESSING ====================
 
 async function processWithdrawalPayment(payment) {
-    const { network, address, cryptoAmount, verificationPaymentId } = payment
+    const { network, address, cryptoAmount, verificationPaymentId, status } = payment
 
     try {
+        // 🚫 Only process pending withdrawals
+        if (status !== "pending") {
+            console.log(
+                `⛔ Withdrawal ${verificationPaymentId}: status is ${status}. Skipping completion/sweep.`
+            )
+            return
+        }
+
         const received = await checkPaymentReceived(network, address)
         const expected = cryptoAmount
 
         if (received >= expected) {
             await completeWithdrawalPayment(payment, received, expected)
         }
-        // ⚠️ New feature: Received > 0 but < expected
+        // ⚠️ Received > 0 but < expected → mark less
         else if (received > 0 && received < expected) {
             console.log(
                 `⚠️ Withdrawal ${verificationPaymentId}: received amount (${received}) is less than expected (${expected}). Marking as less_than_expected.`
@@ -467,10 +475,12 @@ async function processWithdrawalPayment(payment) {
             )
             await updatePendingWithdrawal(payment, received)
         }
+
     } catch (err) {
         console.error(`❌ Withdrawal check failed for ${verificationPaymentId}:`, err.message)
     }
 }
+
 
 async function updatePendingWithdrawal(payment, received) {
     await getWithdrawChargePaymentCollection().updateOne(
@@ -499,7 +509,15 @@ async function markLessThanExpectedWithdrawal(payment, received) {
 }
 
 async function completeWithdrawalPayment(payment, received, expected) {
-    const { network, _id, verificationPaymentId, addressIndex } = payment
+    const { network, _id, verificationPaymentId, addressIndex, status } = payment
+
+    // 🚫 Sweep ONLY if status is pending
+    if (status !== "pending") {
+        console.log(
+            `⛔ Withdrawal ${verificationPaymentId}: status is ${status}. Sweep not allowed. Skipping.`
+        )
+        return
+    }
 
     if (received < expected) {
         console.warn(
@@ -553,6 +571,7 @@ async function completeWithdrawalPayment(payment, received, expected) {
         await createWithdrawalRequest(payment)
     }
 }
+
 
 async function createWithdrawalRequest(payment) {
     const withdrawCollection = getWithdrawCollection()
