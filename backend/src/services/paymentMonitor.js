@@ -216,8 +216,28 @@ async function processOrderPayment(order) {
     }
 }
 
-// 🆕 New helper function for less_than_expected status
+// 🆕 Safe update to mark as less_than_expected
 async function markLessThanExpectedOrder(order, expectedCrypto, received) {
+
+    // If already processing → do NOT downgrade
+    if (order.status === "processing") {
+        console.log(`⛔ Order ${order.orderId} is already processing → skip.`)
+        return
+    }
+
+    // If already started or completed → skip
+    if (order.status === "started" || order.status === "completed") {
+        console.log(`⛔ Order ${order.orderId} is already started or completed → skip.`)
+        return
+    }
+
+    // Only pending orders allowed
+    if (order.status !== "pending") {
+        console.log(`⛔ Order ${order.orderId} is not pending → skip.`)
+        return
+    }
+
+    // Apply less_than_expected
     await getOrdersCollection().updateOne(
         { _id: order._id },
         {
@@ -232,6 +252,7 @@ async function markLessThanExpectedOrder(order, expectedCrypto, received) {
 
     console.log(`⚠️ [Order ${order.orderId}] marked as less_than_expected.`)
 }
+
 
 async function completeOrderPayment(order, expectedCrypto, received, txNetwork) {
     const { orderId, network, address, addressIndex, _id } = order

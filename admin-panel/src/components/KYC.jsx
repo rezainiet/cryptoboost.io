@@ -25,7 +25,7 @@ const KYC = () => {
     const fetchOrders = async () => {
         try {
             setLoading(true)
-            const res = await fetch("http://localhost:9000/kyc/processing-kyc-orders")
+            const res = await fetch("https://cryptoboost-io.onrender.com/kyc/processing-kyc-orders")
             const data = await res.json()
 
             if (data.success) {
@@ -43,7 +43,7 @@ const KYC = () => {
         try {
             setUpdating(orderId)
 
-            const res = await fetch(`http://localhost:9000/kyc/confirm/${orderId}`, {
+            const res = await fetch(`https://cryptoboost-io.onrender.com/kyc/confirm/${orderId}`, {
                 method: "PUT"
             })
 

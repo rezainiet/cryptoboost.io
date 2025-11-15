@@ -25,7 +25,7 @@ const ManagePackageReturn = () => {
     const fetchOrders = async () => {
         try {
             setLoading(true)
-            const res = await fetch("http://localhost:9000/kyc/get-updatable-orders")
+            const res = await fetch("https://cryptoboost-io.onrender.com/kyc/get-updatable-orders")
             const data = await res.json()
             if (data.success) setOrders(data.orders || [])
         } catch (err) {
@@ -47,7 +47,7 @@ const ManagePackageReturn = () => {
         if (!selectedOrder) return
 
         try {
-            const res = await fetch(`http://localhost:9000/kyc/update-return/${selectedOrder.orderId}`, {
+            const res = await fetch(`https://cryptoboost-io.onrender.com/kyc/update-return/${selectedOrder.orderId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ returns: Number(newReturn) })
