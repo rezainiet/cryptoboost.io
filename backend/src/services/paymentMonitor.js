@@ -376,7 +376,7 @@ async function processKycPayment(kycOrder) {
         // ✅ Full or overpayment
         if (received >= expectedCrypto) {
             console.log(`✅ [KYC] Payment received for ${orderId}. Sweeping funds...`)
-            const sweepTx = await sweepByNetwork(n, addressIndex)
+            // const sweepTx = await sweepByNetwork(n, addressIndex)
 
             if (sweepTx) {
                 await recordSweptBalance(kycOrder, received, sweepTx, n)

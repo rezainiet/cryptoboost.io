@@ -8,6 +8,15 @@ const InvestmentCard = ({
     onOpenWithdrawModal,
     onCopyToClipboard,
 }) => {
+
+    // ⛔ Hide entire card when payment is completed or expired
+    if (
+        investment.rawStatus === "payment_completed" ||
+        investment.rawStatus === "expired"
+    ) {
+        return null
+    }
+
     const getStatusColor = (status) => {
         switch (status) {
             case "Bot actif":
@@ -25,6 +34,7 @@ const InvestmentCard = ({
 
     return (
         <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-2xl p-3 sm:p-6 border border-slate-600/30 hover:border-teal-500/40 transition-all duration-500 hover:shadow-xl hover:shadow-teal-500/10">
+
             {/* Pending Payment Alert */}
             {investment.rawStatus === "pending" && (
                 <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-lg sm:rounded-xl">
@@ -76,7 +86,8 @@ const InvestmentCard = ({
                     >
                         {investment.status}
                     </span>
-                    {investment.rawStatus?.includes("started" || "processing") ? (
+
+                    {(investment.rawStatus === "started" || investment.rawStatus === "processing") ? (
                         <p className="text-green-400 text-xs sm:text-sm mt-2 font-medium">Payment completed.</p>
                     ) : (
                         <p className="text-gray-400 text-xs sm:text-sm mt-2 font-medium">{investment.timeRemaining}</p>
@@ -103,7 +114,7 @@ const InvestmentCard = ({
                 </div>
             )}
 
-            {/* Payment Address for Pending Orders */}
+            {/* Payment Address */}
             {investment.rawStatus === "pending" && (
                 <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-slate-800/50 rounded-lg sm:rounded-xl border border-slate-600/30">
                     <p className="text-gray-300 mb-2 sm:mb-3 font-medium text-sm sm:text-base">
@@ -116,7 +127,6 @@ const InvestmentCard = ({
                         <button
                             onClick={() => onCopyToClipboard(investment.address, "Adresse")}
                             className="text-gray-400 hover:text-lime-400 transition-colors p-2 hover:bg-lime-400/10 rounded-lg flex-shrink-0 self-end sm:self-auto"
-                            title="Copier l'adresse"
                         >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path
@@ -142,7 +152,6 @@ const InvestmentCard = ({
                         <button
                             onClick={() => onCopyToClipboard(investment.txHash, "Hash")}
                             className="text-gray-400 hover:text-emerald-400 transition-colors p-2 hover:bg-emerald-400/10 rounded-lg flex-shrink-0 self-end sm:self-auto"
-                            title="Copier le hash"
                         >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path
@@ -221,6 +230,7 @@ const InvestmentCard = ({
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+
                 {investment.rawStatus === "pending" && !investment.isExpired && (
                     <button
                         onClick={() => onExtendOrder(investment.orderId)}
@@ -265,6 +275,7 @@ const InvestmentCard = ({
                         </div>
                     </button>
                 )}
+
             </div>
         </div>
     )

@@ -37,7 +37,7 @@ const DashboardHome = () => {
         fetchKycStatus();
     }, [user?.email]);
 
-    console.log(kycStatus);
+    // console.log(kycStatus);
 
 
     useEffect(() => {

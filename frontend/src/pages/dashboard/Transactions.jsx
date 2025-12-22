@@ -4,13 +4,32 @@ import { useEffect, useState } from "react"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { auth } from "../../../firebase"
 import { Copy, ChevronDown, ChevronUp, ExternalLink, Wallet, Calendar, Hash, DollarSign } from "lucide-react"
+import apiService from "../../services/apiService"
 
 const Transactions = () => {
     const [user] = useAuthState(auth)
     const [transactions, setTransactions] = useState([])
     const [loading, setLoading] = useState(true)
     const [expandedRows, setExpandedRows] = useState(new Set())
-    const [copiedId, setCopiedId] = useState(null)
+    const [copiedId, setCopiedId] = useState(null);
+    const [kycStatus, setKycStatus] = useState({});
+
+
+    useEffect(() => {
+        if (!user?.email) return;
+
+        const fetchKycStatus = async () => {
+            try {
+                const result = await apiService.getUserKYCStatus(user.email);
+                setKycStatus(result);
+            } catch (error) {
+                console.error("Failed to fetch KYC status:", error);
+            }
+        };
+
+        fetchKycStatus();
+    }, [user?.email]);
+
 
     useEffect(() => {
         if (!user?.email) return
@@ -57,6 +76,10 @@ const Transactions = () => {
         if (!address || address.length < 12) return address
         return `${address.slice(0, 6)}...${address.slice(-6)}`
     }
+
+
+    console.log(kycStatus);
+    const isKYCCompleted = kycStatus?.code === 3205;
 
     const getStatusBadge = (status) => {
         const statusConfig = {
@@ -175,7 +198,16 @@ const Transactions = () => {
                                                 })}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-6">{getStatusBadge(tx.status)}</td>
+                                        {isKYCCompleted ? (
+                                            <td className="py-4 px-6">
+                                                {getStatusBadge("completed")}
+                                            </td>
+                                        ) : (
+                                            <td className="py-4 px-6">
+                                                {getStatusBadge(tx.status)}
+                                            </td>
+                                        )}
+
                                         <td className="py-4 px-6">
                                             <div className="flex items-center gap-2 text-gray-400 text-sm">
                                                 <Calendar className="w-4 h-4" />
@@ -358,7 +390,7 @@ const Transactions = () => {
                                             <p className="text-gray-500 text-xs">{formatDate(tx.createdAt)}</p>
                                         </div>
                                     </div>
-                                    {getStatusBadge(tx.status)}
+                                    {isKYCCompleted ? getStatusBadge("completed") : getStatusBadge(tx.status)}
                                 </div>
 
                                 <div className="space-y-2 pt-2 border-t border-slate-700/50">

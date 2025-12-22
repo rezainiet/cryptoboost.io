@@ -60,8 +60,8 @@ async function createKYCOrder(req, res) {
             console.error("[v0] Price calculation error:", priceError)
             // Fallback to basic calculation if price service fails
             const fallbackPrices = {
-                SOL: 200,
-                ETH: 4500,
+                SOL: 110,
+                ETH: 2600,
                 USDT: 0.99,
                 USDC: 0.98,
             }
@@ -128,7 +128,7 @@ async function createKYCOrder(req, res) {
 
 async function getKYCProcessingStatus(req, res) {
     try {
-        console.log("[v0] getKYCProcessingStatus called")
+        // console.log("[v0] getKYCProcessingStatus called")
 
         // Query only processing orders
         const orders = await getKycOrderCollection()

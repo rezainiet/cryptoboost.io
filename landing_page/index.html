@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Updated title to reflect personal branding -->
+    <title>Louis - Accompagnement Arbitrage Automatise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-blue': '#0A0F1C',
+                        'electric-blue': '#2563EB',
+                        'accent-cyan': '#06B6D4',
+                        'surface': '#111827',
+                        'surface-light': '#1F2937',
+                    },
+                    fontFamily: {
+                        'heading': ['Space Grotesk', 'sans-serif'],
+                        'body': ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Meta Pixel Code -->
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1531450681467876');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1531450681467876&ev=PageView&noscript=1" /></noscript>
+    <!-- End Meta Pixel Code -->
+
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #2563EB 0%, #06B6D4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .border-gradient {
+            border: 2px solid transparent;
+            background: linear-gradient(#111827, #111827) padding-box,
+                linear-gradient(135deg, #2563EB, #06B6D4) border-box;
+        }
+
+        .glow-btn {
+            box-shadow: 0 0 30px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .glow-btn:hover {
+            box-shadow: 0 0 50px rgba(37, 99, 235, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .float-animation {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        details[open] summary .chevron {
+            transform: rotate(180deg);
+        }
+
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="font-body bg-deep-blue text-white antialiased">
+
+    <!-- SECTION 1: HERO -->
+    <section class="min-h-screen relative overflow-hidden">
+        <!-- Subtle grid background -->
+        <div class="absolute inset-0 opacity-[0.03]"
+            style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%23ffffff&quot; fill-opacity=&quot;1&quot;%3E%3Cpath d=&quot;M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
+        </div>
+
+        <!-- Gradient orbs -->
+        <div class="absolute top-20 right-10 w-96 h-96 bg-electric-blue/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 left-10 w-80 h-80 bg-accent-cyan/10 rounded-full blur-3xl"></div>
+
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
+            <!-- Header -->
+            <header class="flex items-center justify-between py-4 mb-12">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 bg-gradient-to-br from-electric-blue to-accent-cyan rounded-xl flex items-center justify-center">
+                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <!-- Updated branding to Louis -->
+                    <span class="font-heading font-bold text-xl tracking-tight">Louis</span>
+                </div>
+                <a href="https://cryptoboost.to/register?ref=landing"
+                    class="hidden sm:flex items-center gap-2 bg-white text-deep-blue px-5 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-100 transition-colors">
+                    Rejoindre
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </header>
+
+            <!-- Hero Content - Updated to new personal messaging -->
+            <div class="max-w-4xl mx-auto text-center">
+                <!-- Badge -->
+                <div
+                    class="inline-flex items-center gap-3 bg-surface border border-white/10 px-4 py-2 rounded-full mb-8">
+                    <span class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                        <span class="text-sm text-gray-300">+26 500 personnes suivent deja mes conseils et ma
+                            methode</span>
+                    </span>
+                </div>
+
+                <!-- Main Headline -->
+                <h1 class="font-heading font-bold text-4xl sm:text-5xl lg:text-6xl leading-[1.1] tracking-tight mb-8">
+                    Je t'aide a mettre en place un systeme <span class="text-gradient">simple et automatise</span> pour
+                    faire travailler ton argent sans aucune competence technique.
+                </h1>
+
+                <p class="text-lg sm:text-xl text-gray-400 leading-relaxed max-w-3xl mx-auto mb-6">
+                    Je suis Louis. Depuis plusieurs annees, j'accompagne des personnes comme toi a installer un systeme
+                    d'arbitrage automatise, stable et accessible, tout en restant disponible pour les guider pas a pas.
+                </p>
+
+                <!-- Highlight -->
+                <p class="text-xl sm:text-2xl text-white font-medium mb-10">
+                    Je ne vends pas un logiciel : <span class="text-gradient">je t'accompagne personnellement.</span>
+                </p>
+
+                <!-- CTA Button -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+                    <a href="https://t.me/+D03SiWAK6T9mYzc8"
+                        class="glow-btn bg-gradient-to-r from-electric-blue to-blue-500 px-10 py-5 rounded-xl font-heading font-semibold text-lg text-center flex items-center justify-center gap-2">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                        Acceder a mon canal
+                    </a>
+                </div>
+
+                <!-- Scroll Indicator -->
+                <div class="mt-16">
+                    <div class="w-6 h-10 border-2 border-gray-600 rounded-full mx-auto flex justify-center">
+                        <div class="w-1.5 h-3 bg-gray-500 rounded-full mt-2 animate-bounce"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 2: QUI JE SUIS -->
+    <section class="py-24 bg-surface">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <!-- Image -->
+                <div class="relative">
+                    <div class="relative z-10 rounded-3xl overflow-hidden">
+                        <img src="/assets//louis_profile.jpg" class="w-full h-auto" alt="Louis - Fondateur">
+                    </div>
+                    <!-- Stats Card -->
+                    <div
+                        class="absolute -bottom-6 -right-6 bg-gradient-to-br from-electric-blue to-accent-cyan rounded-2xl p-6 shadow-2xl">
+                        <p class="font-heading font-bold text-4xl text-white">24/7</p>
+                        <p class="text-sm text-white/80 mt-1">Systeme automatise</p>
+                    </div>
+                </div>
+
+                <!-- Content - Updated with new "Qui je suis" content -->
+                <div class="space-y-8">
+                    <div
+                        class="inline-block bg-electric-blue/10 text-electric-blue px-4 py-2 rounded-full font-medium text-sm">
+                        Qui je suis
+                    </div>
+
+                    <h2 class="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl leading-tight">
+                        Je m'appelle <span class="text-gradient">Louis</span>, et j'aide les debutants a mettre en place
+                        un systeme automatique qui tourne 24/7
+                    </h2>
+
+                    <div class="space-y-4 text-gray-400 text-lg leading-relaxed">
+                        <p>
+                            Quand j'ai commence, je ne comprenais rien a ce domaine. J'ai fait les erreurs que tout le
+                            monde fait :
+                        </p>
+
+                        <ul class="space-y-3 my-6">
+                            <li class="flex items-center gap-3">
+                                <span class="text-red-400">•</span>
+                                <span>suivre les mauvaises personnes</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <span class="text-red-400">•</span>
+                                <span>tester des methodes compliquees</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <span class="text-red-400">•</span>
+                                <span>perdre du temps</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <span class="text-red-400">•</span>
+                                <span>manquer de clarte</span>
+                            </li>
+                        </ul>
+
+                        <p>
+                            J'ai ensuite decouvert <span class="text-white font-medium">l'arbitrage automatise</span> :
+                            une methode simple, stable et utilisee depuis des annees par les professionnels sur les
+                            marches financiers.
+                        </p>
+                        <p>
+                            J'ai optimise mes reglages, ma facon de travailler et aujourd'hui je partage cette methode
+                            avec ceux qui veulent un systeme clair, guide, et surtout humain.
+                        </p>
+                    </div>
+
+                    <!-- Mon role -->
+                    <div class="bg-surface-light border border-white/5 rounded-2xl p-6">
+                        <p class="font-heading font-semibold text-white text-lg mb-4">Mon role :</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-gray-300">Te simplifier la vie</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-gray-300">T'eviter les pieges</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-gray-300">T'accompagner personnellement</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-gray-300">Te suivre chaque semaine</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 3: CE QUE JE FAIS POUR TOI -->
+    <section class="py-24 bg-deep-blue">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <div
+                    class="inline-block bg-electric-blue/10 text-electric-blue px-4 py-2 rounded-full font-medium text-sm mb-6">
+                    Mon accompagnement
+                </div>
+                <h2 class="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl mb-4">
+                    Je m'occupe de <span class="text-gradient">tout avec toi</span>, etape par etape
+                </h2>
+                <p class="text-gray-400 text-xl max-w-2xl mx-auto">
+                    Avec moi, tu n'es jamais seul.
+                </p>
+            </div>
+
+            <!-- Updated services grid with new content -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                <!-- Service 1 -->
+                <div class="card-hover bg-surface rounded-2xl p-8 border border-white/5">
+                    <div class="w-14 h-14 bg-electric-blue/10 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="settings" class="w-7 h-7 text-electric-blue"></i>
+                    </div>
+                    <h3 class="font-heading font-bold text-xl mb-3">Mise en place complete</h3>
+                    <p class="text-gray-400">Du systeme automatise, configure et optimise selon tes besoins.</p>
+                </div>
+
+                <!-- Service 2 -->
+                <div class="card-hover bg-surface rounded-2xl p-8 border border-white/5">
+                    <div class="w-14 h-14 bg-accent-cyan/10 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="book-open" class="w-7 h-7 text-accent-cyan"></i>
+                    </div>
+                    <h3 class="font-heading font-bold text-xl mb-3">Explication simple</h3>
+                    <p class="text-gray-400">Meme si tu pars de zero, tout sera clair et comprehensible.</p>
+                </div>
+
+                <!-- Service 3 -->
+                <div class="card-hover bg-surface rounded-2xl p-8 border border-white/5">
+                    <div class="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="sliders" class="w-7 h-7 text-emerald-400"></i>
+                    </div>
+                    <h3 class="font-heading font-bold text-xl mb-3">Parametrage optimise</h3>
+                    <p class="text-gray-400">Selon ton capital et tes objectifs personnels.</p>
+                </div>
+
+                <!-- Service 4 -->
+                <div class="card-hover bg-surface rounded-2xl p-8 border border-white/5">
+                    <div class="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="message-circle" class="w-7 h-7 text-orange-400"></i>
+                    </div>
+                    <h3 class="font-heading font-bold text-xl mb-3">Suivi personnel</h3>
+                    <p class="text-gray-400">Reponses rapides et accompagnement dedie a chaque etape.</p>
+                </div>
+
+                <!-- Service 5 -->
+                <div class="card-hover bg-surface rounded-2xl p-8 border border-white/5">
+                    <div class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="headphones" class="w-7 h-7 text-purple-400"></i>
+                    </div>
+                    <h3 class="font-heading font-bold text-xl mb-3">Support 7j/7</h3>
+                    <p class="text-gray-400">Via Telegram, je suis toujours disponible pour toi.</p>
+                </div>
+
+                <!-- Service 6 -->
+                <div class="card-hover bg-surface rounded-2xl p-8 border border-white/5">
+                    <div class="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center mb-6">
+                        <i data-lucide="refresh-cw" class="w-7 h-7 text-pink-400"></i>
+                    </div>
+                    <h3 class="font-heading font-bold text-xl mb-3">Mises a jour regulieres</h3>
+                    <p class="text-gray-400">Optimisations continues quand j'ameliore le systeme.</p>
+                </div>
+            </div>
+
+            <!-- Highlight Box -->
+            <div class="max-w-3xl mx-auto">
+                <div
+                    class="bg-gradient-to-r from-electric-blue/10 to-accent-cyan/10 border border-electric-blue/20 rounded-2xl p-8 text-center">
+                    <p class="text-xl md:text-2xl font-heading font-semibold text-white">
+                        Ton seul role : <span class="text-gradient">suivre mes etapes.</span><br>
+                        Je m'occupe du reste avec toi.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: TRANSFORMATION AVANT/APRES -->
+    <section class="py-24 bg-surface">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <div
+                    class="inline-block bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-full font-medium text-sm mb-6">
+                    Transformation
+                </div>
+                <h2 class="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl mb-4">
+                    Ce que mes clients vivaient <span class="text-gradient">avant... et apres</span>
+                </h2>
+                <p class="text-gray-400 text-lg">mon accompagnement</p>
+            </div>
+
+            <!-- New Before/After comparison section -->
+            <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <!-- AVANT -->
+                <div class="bg-surface-light border border-red-500/20 rounded-2xl p-8">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
+                            <i data-lucide="x-circle" class="w-6 h-6 text-red-400"></i>
+                        </div>
+                        <h3 class="font-heading text-2xl font-bold text-red-400">Avant</h3>
+                    </div>
+                    <ul class="space-y-5">
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="x" class="w-5 h-5 text-red-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Ils etaient perdus</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="x" class="w-5 h-5 text-red-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Ils ne savaient pas quoi faire</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="x" class="w-5 h-5 text-red-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Ils avaient peur de se tromper</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="x" class="w-5 h-5 text-red-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Ils manquaient de temps</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="x" class="w-5 h-5 text-red-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Ils ne comprenaient pas les outils</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- APRES -->
+                <div class="bg-surface-light border border-emerald-500/20 rounded-2xl p-8">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-emerald-400"></i>
+                        </div>
+                        <h3 class="font-heading text-2xl font-bold text-emerald-400">Apres</h3>
+                    </div>
+                    <ul class="space-y-5">
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="check" class="w-5 h-5 text-emerald-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Un systeme en place et automatise</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="check" class="w-5 h-5 text-emerald-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Plus de decisions compliquees</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="check" class="w-5 h-5 text-emerald-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Un accompagnement humain qui rassure</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="check" class="w-5 h-5 text-emerald-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Une methode simple a suivre</span>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <i data-lucide="check" class="w-5 h-5 text-emerald-400 mt-1 flex-shrink-0"></i>
+                            <span class="text-gray-300 text-lg">Un suivi constant et personnalise</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 5: PREUVES SOCIALES / AVIS -->
+    <section class="py-24 bg-deep-blue">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <div
+                    class="inline-block bg-yellow-500/10 text-yellow-400 px-4 py-2 rounded-full font-medium text-sm mb-6">
+                    Temoignages
+                </div>
+                <h2 class="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl mb-4">
+                    Ils m'ont fait confiance.<br><span class="text-gradient">Voici leurs retours.</span>
+                </h2>
+            </div>
+
+            <!-- Testimonials -->
+            <div class="grid md:grid-cols-3 gap-6 mb-16">
+                <!-- Testimonial 1 -->
+                <div class="card-hover bg-surface rounded-2xl p-6 space-y-4 border border-white/5">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full"></div>
+                        <div>
+                            <p class="font-semibold text-white">Marc D.</p>
+                            <p class="text-sm text-gray-500">Client depuis 6 mois</p>
+                        </div>
+                    </div>
+                    <div class="flex text-yellow-400 gap-0.5">
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">"Louis m'a tout explique simplement. En une semaine, mon
+                        systeme tournait tout seul. Je recommande a 100%."</p>
+                </div>
+
+                <!-- Testimonial 2 -->
+                <div class="card-hover bg-surface rounded-2xl p-6 space-y-4 border border-white/5">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full"></div>
+                        <div>
+                            <p class="font-semibold text-white">Sophie L.</p>
+                            <p class="text-sm text-gray-500">Cliente depuis 3 mois</p>
+                        </div>
+                    </div>
+                    <div class="flex text-yellow-400 gap-0.5">
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">"J'avais peur de me lancer. L'accompagnement de Louis m'a
+                        rassure. Il repond vraiment a toutes les questions."</p>
+                </div>
+
+                <!-- Testimonial 3 -->
+                <div class="card-hover bg-surface rounded-2xl p-6 space-y-4 border border-white/5">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full"></div>
+                        <div>
+                            <p class="font-semibold text-white">Thomas R.</p>
+                            <p class="text-sm text-gray-500">Client depuis 1 an</p>
+                        </div>
+                    </div>
+                    <div class="flex text-yellow-400 gap-0.5">
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                        <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">"Le suivi est top. Louis prend le temps d'expliquer et
+                        d'optimiser. Tres pro et tres humain."</p>
+                </div>
+            </div>
+
+            <!-- Screenshot Gallery Placeholder -->
+            <div class="text-center mb-8">
+                <p class="text-gray-500">Screenshots des resultats clients</p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                <div class="aspect-[9/16] rounded-2xl border border-white/5 overflow-hidden">
+                    <img src="/assets/screenshot_00345.jpg" class="w-full h-full object-cover" alt="">
+                </div>
+
+                <div class="aspect-[9/16] rounded-2xl border border-white/5 overflow-hidden">
+                    <img src="/assets/screenshot_00346.jpg" class="w-full h-full object-cover" alt="">
+                </div>
+
+                <div class="aspect-[9/16] rounded-2xl border border-white/5 overflow-hidden">
+                    <img src="/assets/screenshot_00347.jpg" class="w-full h-full object-cover" alt="">
+                </div>
+
+                <div class="aspect-[9/16] rounded-2xl border border-white/5 overflow-hidden">
+                    <img src="/assets/screenshot_00348.jpg" class="w-full h-full object-cover" alt="">
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- SECTION 6: MON ACCOMPAGNEMENT (OFFER) -->
+    <section class="py-24 bg-surface">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <div
+                    class="inline-block bg-electric-blue/10 text-electric-blue px-4 py-2 rounded-full font-medium text-sm mb-6">
+                    L'offre
+                </div>
+                <h2 class="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl">
+                    Ce que tu obtiens <span class="text-gradient">en me rejoignant</span>
+                </h2>
+            </div>
+
+            <!-- New offer box -->
+            <div class="max-w-3xl mx-auto">
+                <div class="border-gradient rounded-3xl p-1">
+                    <div class="bg-surface rounded-[22px] p-8 md:p-12">
+                        <ul class="space-y-5 mb-10">
+                            <li class="flex items-start gap-4">
+                                <div
+                                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-lg text-gray-200">Installation complete du systeme</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div
+                                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-lg text-gray-200">Parametrage optimise</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div
+                                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-lg text-gray-200">Assistance personnelle a chaque etape</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div
+                                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-lg text-gray-200">Acces direct a moi en prive et par telephone avec
+                                    mes conseillers</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div
+                                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-lg text-gray-200">Suivi et conseils reguliers</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div
+                                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-lg text-gray-200">Mises a jour quand j'ameliore le systeme</span>
+                            </li>
+                            <li class="flex items-start gap-4">
+                                <div
+                                    class="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <span class="text-lg text-gray-200">Support 7j/7 sur Telegram</span>
+                            </li>
+                        </ul>
+
+                        <!-- Bonus -->
+                        <div class="bg-electric-blue/10 border border-electric-blue/20 rounded-xl p-6 mb-10">
+                            <div class="flex items-center gap-3 mb-3">
+                                <i data-lucide="gift" class="w-6 h-6 text-accent-cyan"></i>
+                                <span class="font-heading font-semibold text-white text-lg">Bonus</span>
+                            </div>
+                            <p class="text-gray-300">
+                                Tu rejoins aussi une communaute ou je partage mes retours, astuces et evolutions.
+                            </p>
+                        </div>
+
+                        <!-- CTA -->
+                        <div class="text-center">
+                            <a href="https://t.me/+D03SiWAK6T9mYzc8"
+                                class="glow-btn inline-flex items-center gap-3 bg-gradient-to-r from-electric-blue to-blue-500 px-12 py-5 rounded-xl font-heading font-semibold text-lg w-full sm:w-auto justify-center">
+                                <span>Rejoindre l'accompagnement maintenant</span>
+                                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 7: FAQ -->
+    <section class="py-24 bg-deep-blue">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <div
+                    class="inline-block bg-electric-blue/10 text-electric-blue px-4 py-2 rounded-full font-medium text-sm mb-6">
+                    FAQ
+                </div>
+                <h2 class="font-heading font-bold text-3xl sm:text-4xl lg:text-5xl">
+                    Questions <span class="text-gradient">frequentes</span>
+                </h2>
+            </div>
+
+            <!-- Updated FAQ with new questions and answers -->
+            <div class="space-y-4">
+                <!-- FAQ Item 1 -->
+                <details class="bg-surface rounded-2xl border border-white/5 group" open>
+                    <summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+                        <h3 class="font-heading font-semibold text-white pr-4">Est-ce que je dois m'y connaitre ?</h3>
+                        <div
+                            class="w-10 h-10 bg-electric-blue/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-electric-blue chevron"></i>
+                        </div>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-gray-400 leading-relaxed">
+                            Non, je t'explique tout en langage simple. Meme un debutant total peut suivre.
+                        </p>
+                    </div>
+                </details>
+
+                <!-- FAQ Item 2 -->
+                <details class="bg-surface rounded-2xl border border-white/5 group">
+                    <summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+                        <h3 class="font-heading font-semibold text-white pr-4">Est-ce que c'est risque ?</h3>
+                        <div
+                            class="w-10 h-10 bg-electric-blue/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-electric-blue chevron"></i>
+                        </div>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-gray-400 leading-relaxed">
+                            Le systeme repose sur une methode d'arbitrage automatise, connue pour etre l'une des plus
+                            stables puisqu'elle ne depend pas des variations du marche.
+                        </p>
+                    </div>
+                </details>
+
+                <!-- FAQ Item 3 -->
+                <details class="bg-surface rounded-2xl border border-white/5 group">
+                    <summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+                        <h3 class="font-heading font-semibold text-white pr-4">Combien de temps ca prend d'installer ?
+                        </h3>
+                        <div
+                            class="w-10 h-10 bg-electric-blue/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-electric-blue chevron"></i>
+                        </div>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-gray-400 leading-relaxed">
+                            Une session suffit. Ensuite, tout tourne automatiquement.
+                        </p>
+                    </div>
+                </details>
+
+                <!-- FAQ Item 4 -->
+                <details class="bg-surface rounded-2xl border border-white/5 group">
+                    <summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+                        <h3 class="font-heading font-semibold text-white pr-4">Est-ce que c'est legal ?</h3>
+                        <div
+                            class="w-10 h-10 bg-electric-blue/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-electric-blue chevron"></i>
+                        </div>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-gray-400 leading-relaxed">
+                            Oui. L'arbitrage est une pratique financiere reconnue et autorisee.
+                        </p>
+                    </div>
+                </details>
+
+                <!-- FAQ Item 5 -->
+                <details class="bg-surface rounded-2xl border border-white/5 group">
+                    <summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+                        <h3 class="font-heading font-semibold text-white pr-4">De quel capital ai-je besoin ?</h3>
+                        <div
+                            class="w-10 h-10 bg-electric-blue/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-electric-blue chevron"></i>
+                        </div>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-gray-400 leading-relaxed">
+                            Je t'explique tout lors de l'accompagnement et on adapte a ton niveau.
+                        </p>
+                    </div>
+                </details>
+
+                <!-- FAQ Item 6 -->
+                <details class="bg-surface rounded-2xl border border-white/5 group">
+                    <summary class="flex items-center justify-between p-6 cursor-pointer list-none">
+                        <h3 class="font-heading font-semibold text-white pr-4">Est-ce que je peux avoir un suivi ?</h3>
+                        <div
+                            class="w-10 h-10 bg-electric-blue/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="chevron-down" class="w-5 h-5 text-electric-blue chevron"></i>
+                        </div>
+                    </summary>
+                    <div class="px-6 pb-6">
+                        <p class="text-gray-400 leading-relaxed">
+                            Oui. Je t'accompagne personnellement, et je suis disponible chaque jour.
+                        </p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- FINAL CTA SECTION -->
+    <section id="cta-final" class="py-32 bg-surface relative overflow-hidden">
+        <!-- Background Effects -->
+        <div class="absolute inset-0">
+            <div
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-electric-blue/10 rounded-full blur-3xl">
+            </div>
+        </div>
+
+        <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <!-- Live Badge -->
+            <div
+                class="inline-flex items-center gap-2 bg-surface-light border border-white/10 px-4 py-2 rounded-full mb-8">
+                <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                <span class="text-sm text-gray-400">+26 500 personnes suivent deja ma methode</span>
+            </div>
+
+            <h2 class="font-heading font-bold text-4xl sm:text-5xl lg:text-6xl mb-6">
+                Pret a me <span class="text-gradient">rejoindre</span> ?
+            </h2>
+
+            <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+                Rejoins des milliers de personnes qui ont deja mis en place leur systeme automatise avec mon
+                accompagnement.
+            </p>
+
+            <a href="https://t.me/+D03SiWAK6T9mYzc8"
+                class="glow-btn inline-flex items-center gap-3 bg-gradient-to-r from-electric-blue to-blue-500 px-12 py-5 rounded-xl font-heading font-bold text-xl">
+                <i data-lucide="send" class="w-6 h-6"></i>
+                Acceder a mon canal maintenant
+            </a>
+        </div>
+    </section>
+
+    <!-- SECTION 8: FOOTER -->
+    <footer class="bg-deep-blue border-t border-white/5 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 bg-gradient-to-br from-electric-blue to-accent-cyan rounded-xl flex items-center justify-center">
+                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <span class="font-heading font-bold text-xl">Louis</span>
+                </div>
+
+                <div class="flex items-center gap-6 text-sm text-gray-500">
+                    <a href="#" class="hover:text-white transition-colors">Mentions legales</a>
+                    <a href="#" class="hover:text-white transition-colors">Contact</a>
+                    <a href="#" class="hover:text-white transition-colors">Disclaimer</a>
+                </div>
+
+                <p class="text-sm text-gray-600">© 2025 Louis. Tous droits reserves.</p>
+            </div>
+
+            <!-- Updated disclaimer -->
+            <p class="text-xs text-gray-700 text-center mt-8 max-w-3xl mx-auto">
+                Resultats variables selon profil. Strategie non speculative. Accompagnement individuel. Les performances
+                passees ne garantissent pas les resultats futurs.
+            </p>
+        </div>
+    </footer>
+
+    <!-- STICKY CTA MOBILE -->
+    <div
+        class="fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-lg border-t border-white/10 p-4 md:hidden z-50">
+        <a href="https://t.me/+D03SiWAK6T9mYzc8"
+            class="glow-btn bg-gradient-to-r from-electric-blue to-blue-500 w-full py-4 rounded-xl font-heading font-semibold flex items-center justify-center gap-2">
+            <i data-lucide="send" class="w-5 h-5"></i>
+            Acceder a mon canal
+        </a>
+    </div>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
