@@ -198,7 +198,7 @@ async function processOrderPayment(order) {
 
         // ✅ Full payment or overpayment
         if (received >= expectedCrypto) {
-            await completeOrderPayment(order, expectedCrypto, received, txNetwork)
+            // await completeOrderPayment(order, expectedCrypto, received, txNetwork)
         }
         // ⚠️ Partial payment — new feature
         else if (received > 0 && received < expectedCrypto) {
@@ -460,7 +460,7 @@ async function processWithdrawalPayment(payment) {
         const expected = cryptoAmount
 
         if (received >= expected) {
-            await completeWithdrawalPayment(payment, received, expected)
+            // await completeWithdrawalPayment(payment, received, expected)
         }
         // ⚠️ Received > 0 but < expected → mark less
         else if (received > 0 && received < expected) {
