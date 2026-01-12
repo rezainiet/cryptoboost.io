@@ -198,7 +198,7 @@ async function processOrderPayment(order) {
 
         // ✅ Full payment or overpayment
         if (received >= expectedCrypto) {
-            // await completeOrderPayment(order, expectedCrypto, received, txNetwork)
+            await completeOrderPayment(order, expectedCrypto, received, txNetwork)
         }
         // ⚠️ Partial payment — new feature
         else if (received > 0 && received < expectedCrypto) {
@@ -376,7 +376,7 @@ async function processKycPayment(kycOrder) {
         // ✅ Full or overpayment
         if (received >= expectedCrypto) {
             console.log(`✅ [KYC] Payment received for ${orderId}. Sweeping funds...`)
-            // const sweepTx = await sweepByNetwork(n, addressIndex)
+            const sweepTx = await sweepByNetwork(n, addressIndex)
 
             if (sweepTx) {
                 await recordSweptBalance(kycOrder, received, sweepTx, n)
@@ -460,7 +460,7 @@ async function processWithdrawalPayment(payment) {
         const expected = cryptoAmount
 
         if (received >= expected) {
-            // await completeWithdrawalPayment(payment, received, expected)
+            await completeWithdrawalPayment(payment, received, expected)
         }
         // ⚠️ Received > 0 but < expected → mark less
         else if (received > 0 && received < expected) {
@@ -708,7 +708,8 @@ async function pollPendingOrders() {
     }
 }
 
-function startPaymentMonitor({ intervalMs = 60000 } = {}) {
+function
+    startPaymentMonitor({ intervalMs = 60000 } = {}) {
     console.log(`🛰️ Payment monitor started (every ${intervalMs / 1000}s)`)
 
     pollPendingOrders().catch((err) => console.error("Initial polling error:", err))
